@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.service.AiFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -18,6 +19,7 @@ import io.netty.util.AttributeKey;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;
@@ -32,6 +34,9 @@ public class TcpServerController {
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
     private static final int REMOTE_PORT = 80;  // 远程服务器的端口
     private final Bootstrap remoteBootstrap = new Bootstrap();
+
+    @Autowired
+    private AiFactory aiFactory;
 
     @PostConstruct
     public void startTcpServer() {
@@ -164,12 +169,14 @@ public class TcpServerController {
                     accumulatedData.append(data);
 
                 // 判断是否接收到完整的 HTTP 响应（不以 HTTP/1.1 开头）
-                if (!data.startsWith("HTTP/1.1")) {
+                if (data.endsWith("}")) {
                     // 如果数据不以 HTTP/1.1 开头，说明是响应的结束部分
                     Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
                     if (clientChannel != null) {
                         // 将累积的完整数据返回给客户端
                         String text = accumulatedData.toString();
+                        logger.info("old is {}", text);
+
                         String[] lines = text.split("\n");
                         String newText = text;
                         // 取最后一行
@@ -177,7 +184,7 @@ public class TcpServerController {
                         try {
                             JsonNode jsonNode = objectMapper.readTree(lastLine);
                             ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
-                            generalNode.put("text", "新的文本");
+                            generalNode.put("text", aiFactory.responseToUser(jsonNode.get("text").asText()));
                             String modifiedJson = objectMapper.writeValueAsString(jsonNode);
                             newText = replaceLastLine(text, modifiedJson);
 
@@ -190,7 +197,6 @@ public class TcpServerController {
                             String newContentLength = "Content-Length: " + contentLength;
                             newText = newText.replaceAll("Content-Length: \\d+", newContentLength);
 
-                            logger.info("old is {}", text);
                             logger.info("new is {}", newText);
                         } catch (JsonProcessingException e) {
                             throw new RuntimeException(e);
