@@ -10,6 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,8 +18,6 @@ import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -29,9 +28,8 @@ public class TcpServerController {
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
     private static final int REMOTE_PORT = 80;  // 远程服务器的端口
 
-    // 复用 Bootstrap 和连接池
+    // 复用 Bootstrap
     private final Bootstrap remoteBootstrap = new Bootstrap();
-    private final ConcurrentMap<ChannelHandlerContext, Channel> clientToRemoteChannelMap = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void startTcpServer() {
@@ -56,10 +54,10 @@ public class TcpServerController {
                                 // 接收远程服务器的 TCP 数据并返回给客户端
                                 if (msg instanceof ByteBuf) {
                                     ByteBuf responseData = (ByteBuf) msg;
-                                    logger.info("Received TCP data from remote server: {}", responseData.toString(java.nio.charset.StandardCharsets.UTF_8));
+                                    logger.info("Received TCP data from remote server: {}", responseData.toString(StandardCharsets.UTF_8));
 
-                                    // 找到对应的客户端 Channel 并返回数据
-                                    Channel clientChannel = clientToRemoteChannelMap.get(ctx);
+                                    // 获取对应的客户端 Channel 并返回数据
+                                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
                                     if (clientChannel != null) {
                                         clientChannel.writeAndFlush(responseData.retain());
                                     }
@@ -132,7 +130,7 @@ public class TcpServerController {
 
         private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
             // 检查是否已经有到远程服务器的连接
-            Channel remoteChannel = clientToRemoteChannelMap.get(ctx);
+            Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
             if (remoteChannel != null && remoteChannel.isActive()) {
                 // 如果连接已存在且活跃，直接发送数据
                 remoteChannel.writeAndFlush(data.retain());
@@ -145,12 +143,13 @@ public class TcpServerController {
                 if (f.isSuccess()) {
                     // 连接成功，发送数据
                     Channel newRemoteChannel = f.channel();
-                    clientToRemoteChannelMap.put(ctx, newRemoteChannel);  // 保存客户端与远程服务器的映射
+                    ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(newRemoteChannel);  // 保存远程 Channel
+                    newRemoteChannel.attr(ChannelAttributes.CLIENT_CHANNEL).set(ctx.channel());  // 保存客户端 Channel
                     newRemoteChannel.writeAndFlush(data.retain());
 
                     // 监听远程 Channel 的关闭事件
                     newRemoteChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
-                        clientToRemoteChannelMap.remove(ctx);  // 移除映射
+                        ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(null);  // 清除远程 Channel 引用
                         logger.info("Remote server connection closed");
                     });
                 } else {
@@ -171,11 +170,17 @@ public class TcpServerController {
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
             // 客户端断开连接时，关闭对应的远程服务器连接
-            Channel remoteChannel = clientToRemoteChannelMap.remove(ctx);
+            Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).getAndSet(null);
             if (remoteChannel != null) {
                 remoteChannel.close();
             }
             logger.info("Client disconnected, remote channel closed");
         }
+    }
+
+    // Channel 属性键
+    private static class ChannelAttributes {
+        private static final AttributeKey<Channel> REMOTE_CHANNEL = AttributeKey.valueOf("REMOTE_CHANNEL");
+        private static final AttributeKey<Channel> CLIENT_CHANNEL = AttributeKey.valueOf("CLIENT_CHANNEL");
     }
 }
