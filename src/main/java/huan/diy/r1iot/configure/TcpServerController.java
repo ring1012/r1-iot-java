@@ -27,85 +27,45 @@ public class TcpServerController {
     // 远程服务器地址
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
     private static final int REMOTE_PORT = 80;  // 远程服务器的端口
-
-    // 复用 Bootstrap
     private final Bootstrap remoteBootstrap = new Bootstrap();
 
     @PostConstruct
     public void startTcpServer() {
-        // 服务器监听端口
-        int port = 80;  // 可以改成需要的端口
+        int port = 80;  // 服务器监听端口
 
-        // 创建两个 EventLoopGroup，一个用于接收连接，一个用于处理连接
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         // 初始化远程服务器的 Bootstrap
-        remoteBootstrap.group(workerGroup)  // 复用 workerGroup
+        remoteBootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
-                        // 添加心跳机制
-                        ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));  // 30秒空闲检测
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                // 接收远程服务器的 TCP 数据并返回给客户端
-                                if (msg instanceof ByteBuf) {
-                                    ByteBuf responseData = (ByteBuf) msg;
-                                    logger.info("Received TCP data from remote server: {}", responseData.toString(StandardCharsets.UTF_8));
-
-                                    // 获取对应的客户端 Channel 并返回数据
-                                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
-                                    if (clientChannel != null) {
-                                        clientChannel.writeAndFlush(responseData.retain());
-                                    }
-                                }
-                            }
-
-                            @Override
-                            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                                // 处理空闲事件，发送心跳包
-                                if (evt instanceof IdleStateEvent) {
-                                    logger.info("Sending heartbeat to remote server");
-                                    ctx.writeAndFlush(ctx.alloc().buffer().writeBytes("HEARTBEAT".getBytes()));
-                                }
-                            }
-
-                            @Override
-                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                logger.error("Remote server handler error", cause);
-                                ctx.close();
-                            }
-                        });
+                        ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));
+                        ch.pipeline().addLast(new RemoteServerHandler());
                     }
                 });
 
         try {
-            // 创建 ServerBootstrap
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)  // 使用 NIO 传输
+                    .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            // 直接处理字节流，不涉及 HTTP 协议
                             ch.pipeline().addLast(new TcpForwardHandler());
                         }
                     });
 
-            // 绑定端口并启动服务器
             ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
             logger.info("TCP Server started on port {}", port);
 
-            // 等待服务器关闭
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             logger.error("TCP Server interrupted", e);
             throw new RuntimeException(e);
         } finally {
-            // 优雅关闭
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
@@ -115,12 +75,9 @@ public class TcpServerController {
     private class TcpForwardHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            // 接收客户端的 TCP 数据
             if (msg instanceof ByteBuf) {
                 ByteBuf data = (ByteBuf) msg;
                 logger.info("Received TCP data from client: {}", data.toString(StandardCharsets.UTF_8));
-
-                // 将数据转发到远程服务器
                 forwardToRemoteServer(ctx, data);
             } else {
                 logger.error("Received unknown message type: {}", msg.getClass());
@@ -129,31 +86,25 @@ public class TcpServerController {
         }
 
         private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
-            // 检查是否已经有到远程服务器的连接
             Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
             if (remoteChannel != null && remoteChannel.isActive()) {
-                // 如果连接已存在且活跃，直接发送数据
                 remoteChannel.writeAndFlush(data.retain());
                 return;
             }
 
-            // 如果没有连接，创建新的连接
             ChannelFuture future = remoteBootstrap.connect(new InetSocketAddress(REMOTE_HOST, REMOTE_PORT));
             future.addListener((ChannelFutureListener) f -> {
                 if (f.isSuccess()) {
-                    // 连接成功，发送数据
                     Channel newRemoteChannel = f.channel();
-                    ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(newRemoteChannel);  // 保存远程 Channel
-                    newRemoteChannel.attr(ChannelAttributes.CLIENT_CHANNEL).set(ctx.channel());  // 保存客户端 Channel
+                    ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(newRemoteChannel);
+                    newRemoteChannel.attr(ChannelAttributes.CLIENT_CHANNEL).set(ctx.channel());
                     newRemoteChannel.writeAndFlush(data.retain());
 
-                    // 监听远程 Channel 的关闭事件
                     newRemoteChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
-                        ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(null);  // 清除远程 Channel 引用
+                        ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(null);
                         logger.info("Remote server connection closed");
                     });
                 } else {
-                    // 连接失败
                     logger.error("Failed to connect to remote server: {}", f.cause().getMessage());
                     ctx.close();
                 }
@@ -162,19 +113,75 @@ public class TcpServerController {
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            // 异常处理
             logger.error("TCP Server error", cause);
             ctx.close();
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            // 客户端断开连接时，关闭对应的远程服务器连接
             Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).getAndSet(null);
             if (remoteChannel != null) {
                 remoteChannel.close();
             }
             logger.info("Client disconnected, remote channel closed");
+        }
+    }
+
+    // 远程服务器处理器
+    // 远程服务器处理器
+    private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
+        private StringBuilder accumulatedData = new StringBuilder();
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            if (msg instanceof ByteBuf) {
+                ByteBuf responseData = (ByteBuf) msg;
+                String data = responseData.toString(StandardCharsets.UTF_8);
+
+                // 检查是否包含 Content-Length: 0
+                if (data.contains("Content-Length: 0")) {
+                    // 如果包含 Content-Length: 0，直接返回给客户端
+                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
+                    if (clientChannel != null) {
+                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
+                    }
+                    return;
+                }
+
+                // 否则将数据累积到 accumulatedData 中
+                accumulatedData.append(data);
+
+                // 判断是否接收到完整的 HTTP 响应（不以 HTTP/1.1 开头）
+                if (!data.startsWith("HTTP/1.1")) {
+                    // 如果数据不以 HTTP/1.1 开头，说明是响应的结束部分
+                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
+                    if (clientChannel != null) {
+                        // 将累积的完整数据返回给客户端
+                        String text = accumulatedData.toString();
+                        String[] lines = text.split("\n");
+
+                        // 取最后一行
+                        String lastLine = lines[lines.length - 1];
+                        
+                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
+                        accumulatedData.setLength(0);  // 清空累积的数据
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+            if (evt instanceof IdleStateEvent) {
+                logger.info("Sending heartbeat to remote server");
+                ctx.writeAndFlush(ctx.alloc().buffer().writeBytes("HEARTBEAT".getBytes()));
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            logger.error("Remote server handler error", cause);
+            ctx.close();
         }
     }
 
