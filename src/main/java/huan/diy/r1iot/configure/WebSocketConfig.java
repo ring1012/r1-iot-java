@@ -12,7 +12,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // 注册 WebSocket 处理器，并指定端点路径
-        registry.addHandler(new MyWebSocketHandler(), "/**")
+        registry.addHandler(new MyWebSocketHandler(), "/trafficRouter/cs")
                 .setAllowedOrigins("*"); // 允许所有来源
     }
 }

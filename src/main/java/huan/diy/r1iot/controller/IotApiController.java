@@ -24,7 +24,7 @@ public class IotApiController {
     @Autowired
     private HttpServletRequest request;
 
-    @PostMapping("/trafficRouter/**")
+    @PostMapping("/2trafficRouter/**")
     public IotResp uploadBinaryFile(HttpServletRequest request) {
         System.out.println(new Date());
         printRequestHeaders();
