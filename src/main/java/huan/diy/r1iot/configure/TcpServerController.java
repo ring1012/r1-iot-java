@@ -1,5 +1,9 @@
 package huan.diy.r1iot.configure;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -23,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class TcpServerController {
     private static final Logger logger = LoggerFactory.getLogger(TcpServerController.class);
-
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     // 远程服务器地址
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
     private static final int REMOTE_PORT = 80;  // 远程服务器的端口
@@ -132,6 +136,14 @@ public class TcpServerController {
     private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
         private StringBuilder accumulatedData = new StringBuilder();
 
+        private static String replaceLastLine(String text, String newLastLine) {
+            int lastNewlineIndex = text.lastIndexOf("\n");
+            if (lastNewlineIndex == -1) {
+                return newLastLine; // 如果只有一行，直接返回新内容
+            }
+            return text.substring(0, lastNewlineIndex + 1) + newLastLine;
+        }
+
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof ByteBuf) {
@@ -139,7 +151,7 @@ public class TcpServerController {
                 String data = responseData.toString(StandardCharsets.UTF_8);
 
                 // 检查是否包含 Content-Length: 0
-                if (data.contains("Content-Length: 0")) {
+                if (data.contains("Content-Length: 0") || data.contains("Content-Length: 95") ) {
                     // 如果包含 Content-Length: 0，直接返回给客户端
                     Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
                     if (clientChannel != null) {
@@ -149,7 +161,7 @@ public class TcpServerController {
                 }
 
                 // 否则将数据累积到 accumulatedData 中
-                accumulatedData.append(data);
+                    accumulatedData.append(data);
 
                 // 判断是否接收到完整的 HTTP 响应（不以 HTTP/1.1 开头）
                 if (!data.startsWith("HTTP/1.1")) {
@@ -159,11 +171,33 @@ public class TcpServerController {
                         // 将累积的完整数据返回给客户端
                         String text = accumulatedData.toString();
                         String[] lines = text.split("\n");
-
+                        String newText = text;
                         // 取最后一行
                         String lastLine = lines[lines.length - 1];
-                        
-                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
+                        try {
+                            JsonNode jsonNode = objectMapper.readTree(lastLine);
+                            ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
+                            generalNode.put("text", "新的文本");
+                            String modifiedJson = objectMapper.writeValueAsString(jsonNode);
+                            newText = replaceLastLine(text, modifiedJson);
+
+                            // 将响应体转换为字节数组（UTF-8 编码）
+                            byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
+
+                            // 计算字节长度
+                            int contentLength = responseBytes.length;
+                            // 替换 Content-Length 字段
+                            String newContentLength = "Content-Length: " + contentLength;
+                            newText = newText.replaceAll("Content-Length: \\d+", newContentLength);
+
+                            logger.info("old is {}", text);
+                            logger.info("new is {}", newText);
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
+
+
+                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(newText.getBytes()));
                         accumulatedData.setLength(0);  // 清空累积的数据
                     }
                 }
