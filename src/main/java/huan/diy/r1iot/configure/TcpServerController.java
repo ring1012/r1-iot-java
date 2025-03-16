@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.helper.AsrServerHandler;
+import huan.diy.r1iot.model.AsrHandleType;
+import huan.diy.r1iot.model.AsrResult;
 import huan.diy.r1iot.service.AiFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -34,6 +37,9 @@ public class TcpServerController {
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
     private static final int REMOTE_PORT = 80;  // 远程服务器的端口
     private final Bootstrap remoteBootstrap = new Bootstrap();
+
+    @Autowired
+    private AsrServerHandler asrServerHandler;
 
     @Autowired
     private AiFactory aiFactory;
@@ -86,7 +92,6 @@ public class TcpServerController {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof ByteBuf) {
                 ByteBuf data = (ByteBuf) msg;
-                logger.info("Received TCP data from client: {}", data.toString(StandardCharsets.UTF_8));
                 forwardToRemoteServer(ctx, data);
             } else {
                 logger.error("Received unknown message type: {}", msg.getClass());
@@ -141,72 +146,47 @@ public class TcpServerController {
     private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
         private StringBuilder accumulatedData = new StringBuilder();
 
-        private static String replaceLastLine(String text, String newLastLine) {
-            int lastNewlineIndex = text.lastIndexOf("\n");
-            if (lastNewlineIndex == -1) {
-                return newLastLine; // 如果只有一行，直接返回新内容
-            }
-            return text.substring(0, lastNewlineIndex + 1) + newLastLine;
-        }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof ByteBuf) {
                 ByteBuf responseData = (ByteBuf) msg;
                 String data = responseData.toString(StandardCharsets.UTF_8);
-
-                // 检查是否包含 Content-Length: 0
-                if (data.contains("Content-Length: 0") || data.contains("Content-Length: 95") ) {
-                    // 如果包含 Content-Length: 0，直接返回给客户端
-                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
-                    if (clientChannel != null) {
+                AsrResult asrResult =asrServerHandler.handle(data);
+                Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
+                if (clientChannel == null) {
+                    return;
+                }
+                switch (asrResult.getType()){
+                    case DROPPED, SKIP:
                         clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
-                    }
+                        return;
+                    case APPEND:
+                        accumulatedData.append(asrResult.getFixedData());
+
+                        try{
+                            String[] lines = accumulatedData.toString().split("\n");
+                             objectMapper.readTree(lines[lines.length-1]);
+                            break;
+                        }catch (Exception e){
+                            return;
+
+                        }
+                    case END:
+                        accumulatedData.append(asrResult.getFixedData());
+                        break;
+
+                }
+                logger.info("from R1: {}", accumulatedData.toString());
+                String aiReply = asrServerHandler.passToAI(accumulatedData.toString());
+                logger.info("from AI: {}", aiReply);
+                if(aiReply == null){
+                    clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
                     return;
                 }
 
-                // 否则将数据累积到 accumulatedData 中
-                    accumulatedData.append(data);
-
-                // 判断是否接收到完整的 HTTP 响应（不以 HTTP/1.1 开头）
-                if (data.endsWith("}")) {
-                    // 如果数据不以 HTTP/1.1 开头，说明是响应的结束部分
-                    Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
-                    if (clientChannel != null) {
-                        // 将累积的完整数据返回给客户端
-                        String text = accumulatedData.toString();
-                        logger.info("old is {}", text);
-
-                        String[] lines = text.split("\n");
-                        String newText = text;
-                        // 取最后一行
-                        String lastLine = lines[lines.length - 1];
-                        try {
-                            JsonNode jsonNode = objectMapper.readTree(lastLine);
-                            ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
-                            generalNode.put("text", aiFactory.responseToUser(jsonNode.get("text").asText()));
-                            String modifiedJson = objectMapper.writeValueAsString(jsonNode);
-                            newText = replaceLastLine(text, modifiedJson);
-
-                            // 将响应体转换为字节数组（UTF-8 编码）
-                            byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
-
-                            // 计算字节长度
-                            int contentLength = responseBytes.length;
-                            // 替换 Content-Length 字段
-                            String newContentLength = "Content-Length: " + contentLength;
-                            newText = newText.replaceAll("Content-Length: \\d+", newContentLength);
-
-                            logger.info("new is {}", newText);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-
-
-                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(newText.getBytes()));
-                        accumulatedData.setLength(0);  // 清空累积的数据
-                    }
-                }
+                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(aiReply.getBytes()));
+                accumulatedData.setLength(0);  // 清空累积的数据
             }
         }
 

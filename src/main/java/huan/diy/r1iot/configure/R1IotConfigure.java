@@ -13,8 +13,9 @@ public class R1IotConfigure {
         // 创建 HttpComponentsClientHttpRequestFactory 实例
         HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
 
-        // 设置 read timeout 为 120 秒
-        factory.setReadTimeout(120000);
+        // 设置 read timeout 为 20 秒
+        factory.setReadTimeout(20000);
+        factory.setConnectTimeout(1000);
 
         // 创建 RestTemplate 实例并设置自定义的 RequestFactory
 
