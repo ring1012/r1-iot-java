@@ -25,21 +25,27 @@ public class AsrServerHandler {
     @Autowired
     private DefaultServiceImpl defaultServiceImpl;
 
-
     public AsrResult handle(String data) {
-
-        try{
+        try {
             // drop if contentLength = 0
             if (data.contains("Content-Length: 0")) {
                 return new AsrResult(AsrHandleType.DROPPED, data, data);
             }
 
             JsonNode jsonNode;
-            try{
+            String lastLine;
+            try {
                 String[] lines = data.split("\n");
-                jsonNode = objectMapper.readTree(lines[lines.length - 1]);
-            }catch (Exception e){
+                lastLine = lines[lines.length - 1];
+                jsonNode = objectMapper.readTree(lastLine);
+            } catch (Exception e) {
                 // some case, asr only return partial json snippet
+                // ObjectMapper有容错能力
+                return new AsrResult(AsrHandleType.APPEND, data, data);
+            }
+
+            if (lastLine.length() - jsonNode.toString().length() > 5) {
+                log.warn("obj {}", data);
                 return new AsrResult(AsrHandleType.APPEND, data, data);
             }
 
@@ -49,7 +55,7 @@ public class AsrServerHandler {
             }
 
             return new AsrResult(AsrHandleType.END, data, data);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.warn("handle error {}", data);
             // some case, asr only return partial json snippet
             return new AsrResult(AsrHandleType.DROPPED, data, data);
@@ -58,15 +64,14 @@ public class AsrServerHandler {
     }
 
 
-
-    public String enhance(String lstRespStr){
+    public String enhance(String lstRespStr) {
         JsonNode jsonNode;
         String lastLine;
-        try{
+        try {
             String[] lines = lstRespStr.split("\n");
-             lastLine = lines[lines.length - 1];
+            lastLine = lines[lines.length - 1];
             jsonNode = objectMapper.readTree(lastLine);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.warn("resp last {}", lstRespStr);
             // some case, asr only return partial json snippet
             return null;

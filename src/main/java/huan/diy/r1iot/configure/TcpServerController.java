@@ -144,43 +144,49 @@ public class TcpServerController {
     // 远程服务器处理器
     // 远程服务器处理器
     private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
-        private StringBuilder accumulatedData = new StringBuilder();
+        private StringBuffer accumulatedData = new StringBuffer();
 
+        public synchronized void appendData(String data) {
+            accumulatedData.append(data);
+        }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof ByteBuf) {
                 ByteBuf responseData = (ByteBuf) msg;
                 String data = responseData.toString(StandardCharsets.UTF_8);
-                AsrResult asrResult =asrServerHandler.handle(data);
+                logger.info("each data from remote server: {}", data);
+
+                AsrResult asrResult = asrServerHandler.handle(data);
                 Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
                 if (clientChannel == null) {
                     return;
                 }
-                switch (asrResult.getType()){
+                switch (asrResult.getType()) {
                     case DROPPED, SKIP:
                         clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
                         return;
                     case APPEND:
-                        accumulatedData.append(asrResult.getFixedData());
-
-                        try{
+                        appendData(asrResult.getFixedData());
+                        try {
                             String[] lines = accumulatedData.toString().split("\n");
-                             objectMapper.readTree(lines[lines.length-1]);
-                            break;
-                        }catch (Exception e){
+                            JsonNode node = objectMapper.readTree(lines[lines.length - 1]);
+                            if (node.has("responseId")) {
+                                break;
+                            }
                             return;
-
+                        } catch (Exception e) {
+                            return;
                         }
                     case END:
-                        accumulatedData.append(asrResult.getFixedData());
+                        appendData(asrResult.getFixedData());
                         break;
 
                 }
                 logger.info("from R1: {}", accumulatedData.toString());
                 String aiReply = asrServerHandler.enhance(accumulatedData.toString());
                 logger.info("from AI: {}", aiReply);
-                if(aiReply == null){
+                if (aiReply == null) {
                     clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
                     return;
                 }

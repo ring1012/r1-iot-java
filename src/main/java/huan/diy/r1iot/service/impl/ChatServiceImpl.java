@@ -20,6 +20,9 @@ public class ChatServiceImpl implements IR1Service {
 
         ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
         generalNode.put("text", reply);
+        generalNode.put("style", "CQA_common_customized");
+        generalNode.put("resourceId", "904754");
+        ((ObjectNode) jsonNode).put("matchType", "NOT_UNDERSTAND");
         return jsonNode;
     }
 }
