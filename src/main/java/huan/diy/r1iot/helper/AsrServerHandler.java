@@ -3,24 +3,28 @@ package huan.diy.r1iot.helper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.model.AsrHandleType;
 import huan.diy.r1iot.model.AsrResult;
-import huan.diy.r1iot.service.AiFactory;
+import huan.diy.r1iot.service.IR1Service;
+import huan.diy.r1iot.service.impl.DefaultServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @Slf4j
 @Component
 public class AsrServerHandler {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Autowired
+    private Map<String, IR1Service> r1ServiceMap;
 
     @Autowired
-    private AiFactory aiFactory;
+    private DefaultServiceImpl defaultServiceImpl;
+
 
     public AsrResult handle(String data) {
 
@@ -53,50 +57,42 @@ public class AsrServerHandler {
 
     }
 
-    public String passToAI(String lstRespStr) {
+
+
+    public String enhance(String lstRespStr){
+        JsonNode jsonNode;
+        String lastLine;
         try{
-
-            JsonNode jsonNode;
-            String lastLine;
-            try{
-                String[] lines = lstRespStr.split("\n");
-                lastLine = lines[lines.length - 1];
-                jsonNode = objectMapper.readTree(lastLine);
-            }catch (Exception e){
-                log.warn("resp last {}", lstRespStr);
-                // some case, asr only return partial json snippet
-                return null;
-            }
-
-            String userInput = jsonNode.get("text").asText();
-            String reply = aiFactory.responseToUser(userInput);
-
-            ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
-            generalNode.put("text", reply);
-            String modifiedJson = lastLine;
-            try {
-                modifiedJson = objectMapper.writeValueAsString(jsonNode);
-            } catch (JsonProcessingException e) {
-                log.warn("not json data {}", lstRespStr);
-            }
-            String newText = replaceLastLine(lstRespStr, modifiedJson);
-
-            // 将响应体转换为字节数组（UTF-8 编码）
-            byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
-
-            // 计算字节长度
-            int contentLength = responseBytes.length;
-            // 替换 Content-Length 字段
-            String newContentLength = "Content-Length: " + contentLength;
-            return newText.replaceAll("Content-Length: \\d+", newContentLength);
+            String[] lines = lstRespStr.split("\n");
+             lastLine = lines[lines.length - 1];
+            jsonNode = objectMapper.readTree(lastLine);
         }catch (Exception e){
-            log.warn("passToAI error {}", lstRespStr);
+            log.warn("resp last {}", lstRespStr);
             // some case, asr only return partial json snippet
             return null;
         }
 
 
+        String serviceName = jsonNode.get("service").asText();
+        IR1Service r1Service = r1ServiceMap.getOrDefault(serviceName, defaultServiceImpl);
+        JsonNode fixedJsonNode = r1Service.replaceOutPut(jsonNode);
 
+        String modifiedJson = lastLine;
+        try {
+            modifiedJson = objectMapper.writeValueAsString(fixedJsonNode);
+        } catch (JsonProcessingException e) {
+            log.warn("not json data {}", lstRespStr);
+        }
+        String newText = replaceLastLine(lstRespStr, modifiedJson);
+
+        // 将响应体转换为字节数组（UTF-8 编码）
+        byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
+
+        // 计算字节长度
+        int contentLength = responseBytes.length;
+        // 替换 Content-Length 字段
+        String newContentLength = "Content-Length: " + contentLength;
+        return newText.replaceAll("Content-Length: \\d+", newContentLength);
     }
 
     private static String replaceLastLine(String text, String newLastLine) {

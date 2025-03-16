@@ -178,7 +178,7 @@ public class TcpServerController {
 
                 }
                 logger.info("from R1: {}", accumulatedData.toString());
-                String aiReply = asrServerHandler.passToAI(accumulatedData.toString());
+                String aiReply = asrServerHandler.enhance(accumulatedData.toString());
                 logger.info("from AI: {}", aiReply);
                 if(aiReply == null){
                     clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));

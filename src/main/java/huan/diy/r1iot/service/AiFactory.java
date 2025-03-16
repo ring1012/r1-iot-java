@@ -1,7 +1,7 @@
 package huan.diy.r1iot.service;
 
-import huan.diy.r1iot.service.impl.GoogleGemini;
-import huan.diy.r1iot.service.impl.GrokAiX;
+import huan.diy.r1iot.service.ai.GoogleGemini;
+import huan.diy.r1iot.service.ai.GrokAiX;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

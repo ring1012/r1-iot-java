@@ -1,4 +1,4 @@
-package huan.diy.r1iot.service;
+package huan.diy.r1iot.service.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
