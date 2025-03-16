@@ -20,7 +20,7 @@ public class GoogleGemini implements AiEnhanceService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private static final String APP_KEY = "Your key";
+    private static final String APP_KEY = System.getenv("GOOGLE_KEY");
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+APP_KEY; // 替换为实际的 API URL
     private static final ObjectMapper objectMapper = new ObjectMapper();
 

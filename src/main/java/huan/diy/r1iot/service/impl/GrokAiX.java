@@ -16,7 +16,7 @@ import org.springframework.web.client.RestTemplate;
 public class GrokAiX implements AiEnhanceService {
 
     private static final String API_URL = "https://api.x.ai/v1/chat/completions";
-    private static final String AUTHORIZATION_TOKEN = "Bearer your token";
+    private static final String AUTHORIZATION_TOKEN = "Bearer "+System.getenv("XAI_KEY");
     private static final String MODEL = "grok-2-latest";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
