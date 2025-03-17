@@ -1,13 +1,9 @@
 package huan.diy.r1iot.configure;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.helper.AsrServerHandler;
-import huan.diy.r1iot.model.AsrHandleType;
 import huan.diy.r1iot.model.AsrResult;
-import huan.diy.r1iot.service.AiFactory;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -41,11 +37,8 @@ public class TcpServerController {
     @Autowired
     private AsrServerHandler asrServerHandler;
 
-    @Autowired
-    private AiFactory aiFactory;
 
-    @PostConstruct
-    public void startTcpServer() {
+    public void initTcp() {
         int port = 80;  // 服务器监听端口
 
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -84,6 +77,12 @@ public class TcpServerController {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+    }
+
+    @PostConstruct
+    public void startTcpServer() {
+        new Thread(this::initTcp).start();
+
     }
 
     // 自定义 TCP 转发处理器
@@ -141,7 +140,6 @@ public class TcpServerController {
         }
     }
 
-    // 远程服务器处理器
     // 远程服务器处理器
     private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
         private StringBuffer accumulatedData = new StringBuffer();
