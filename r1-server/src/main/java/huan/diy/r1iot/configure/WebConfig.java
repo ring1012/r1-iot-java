@@ -17,4 +17,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .setCachePeriod(3600); // 可选：设置缓存时间（单位：秒）
     }
 
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // 将所有未知路径重定向到 index.html
+        registry.addViewController("/{path:[^\\.]*}")
+                .setViewName("forward:/index.html");
+    }
+
 }
