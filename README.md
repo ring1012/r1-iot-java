@@ -1,3 +1,12 @@
+## TODO
+
+- chat：admin配置页面，配置ai key以及选择ai平台
+- music：音乐admin配置页面，允许个性化登录音乐平台。获取音乐源。切换音乐源。
+- news：抓新闻源，切换多个新闻源
+- iot：和hass的API集成。可以考虑引入AI，解析用户的语言成为hass的api input。如果有hacs插件那就更好了。
+- 探索接受原始音频数据，切换asr服务商（long term）。
+
+
 ### music
 
 ```json
