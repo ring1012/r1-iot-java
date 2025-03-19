@@ -2,6 +2,7 @@ package huan.diy.r1iot.dao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.model.Device;
+import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -42,6 +44,14 @@ public class LocalDeviceDao {
         } else {
             System.out.println("Device config path already exists: " + path);
         }
+
+        refresh();
+    }
+
+    private void refresh() {
+        List<Device> devices = listAll();
+        R1IotUtils.setDeviceMap(devices.stream()
+                .collect(Collectors.toMap(Device::getId, device -> device)));
     }
 
 
@@ -88,9 +98,11 @@ public class LocalDeviceDao {
         } catch (IOException e) {
             log.error("Failed to write device to file", e);
             return 0; // 写入失败，返回失败
+        } finally {
+            refresh();
         }
-    }
 
+    }
 
 
 }

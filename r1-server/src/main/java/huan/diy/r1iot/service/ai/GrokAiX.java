@@ -16,7 +16,6 @@ import org.springframework.web.client.RestTemplate;
 public class GrokAiX implements IAIService, IWebAlias {
 
     private static final String API_URL = "https://api.x.ai/v1/chat/completions";
-    private static final String AUTHORIZATION_TOKEN = "Bearer "+System.getenv("XAI_KEY");
     private static final String MODEL = "grok-2-latest";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -54,11 +53,11 @@ public class GrokAiX implements IAIService, IWebAlias {
     }
 
     @Override
-    public String responseToUser(JsonNode request) {
+    public String responseToUser(JsonNode request, String key) {
         // 设置请求头
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", AUTHORIZATION_TOKEN);
+        headers.set("Authorization", "Bearer " + key);
 
         // 创建HTTP请求实体
         HttpEntity<JsonNode> httpEntity = new HttpEntity<>(request, headers);

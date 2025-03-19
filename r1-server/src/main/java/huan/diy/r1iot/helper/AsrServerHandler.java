@@ -96,8 +96,8 @@ public class AsrServerHandler {
         // 计算字节长度
         int contentLength = responseBytes.length;
         // 替换 Content-Length 字段
-        String newContentLength = "Content-Length:" + contentLength;
-        return newText.replaceAll("Content-Length:\\d+", newContentLength);
+        String newContentLength = "Content-Length: " + contentLength;
+        return newText.replaceAll("Content-Length: \\d+", newContentLength);
     }
 
     private static String replaceLastLine(String text, String newLastLine) {

@@ -2,7 +2,7 @@ package huan.diy.r1iot.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import huan.diy.r1iot.service.AiFactory;
+import huan.diy.r1iot.service.ai.AiFactory;
 import huan.diy.r1iot.service.IR1Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -25,6 +25,8 @@ const Home: React.FC = () => {
 
     useEffect(() => {
         const activeDevice = devices.find((device) => device.id === activeDeviceId);
+        console.log("activeDeviceId", activeDeviceId)
+
         if (activeDevice) {
             setInitValues(activeDevice);
             form.setFieldsValue(activeDevice);
@@ -41,15 +43,19 @@ const Home: React.FC = () => {
                 setCurrentDeviceId(respData.currentDeviceId);
                 setR1Resources(respData.r1Resources)
 
+
+
                 if (!respData.devices) {
-                    handleAddDevice(respData.currentDeviceId);
+                    handleAddDevice([], respData.currentDeviceId);
                     return;
                 }
-                const currentDevice = devices.find(item => item.id == respData.currentDeviceId)
+
+                setActiveDeviceId(respData.devices[0].id);
+                const currentDevice = respData.devices.find(item => item.id == respData.currentDeviceId)
                 if (currentDevice) {
                     setActiveDeviceId(respData.currentDeviceId);
                 } else {
-                    handleAddDevice(respData.currentDeviceId);
+                    handleAddDevice(respData.devices, respData.currentDeviceId);
                 }
 
             } catch (err) {
@@ -67,6 +73,7 @@ const Home: React.FC = () => {
 
 
     const handleTabChange = (deviceId: string) => {
+        console.log("change tab")
         setActiveDeviceId(deviceId);
         const activeDevice = devices.find((device) => device.id === deviceId);
         if (activeDevice) {
@@ -76,10 +83,11 @@ const Home: React.FC = () => {
     };
 
 
-    const handleAddDevice = (newId: string) => {
+    const handleAddDevice = (myDevices: Device[], newId: string) => {
+        console.log("new add")
         const newDevice: Device = {
-            id: newId,
-            name: `音箱${devices.length + 1}`,
+            id: newId?newId:"",
+            name: `音箱${myDevices.length + 1}`,
             aiConfig: {
                 choice: "Grok",
                 key: ""
@@ -92,10 +100,13 @@ const Home: React.FC = () => {
                 choice: "chinaSound"
             },
         };
-        setDevices([...devices, newDevice]);
-        setActiveDeviceId(newDevice.id);
-        setInitValues(newDevice);
-        form.setFieldsValue(newDevice);
+        setDevices([...myDevices, newDevice]);
+        if(!!newId){
+            setActiveDeviceId(newDevice.id);
+            setInitValues(newDevice);
+            form.setFieldsValue(newDevice);
+        }
+
     };
 
     const handleSaveDevice = async (values: Device) => {

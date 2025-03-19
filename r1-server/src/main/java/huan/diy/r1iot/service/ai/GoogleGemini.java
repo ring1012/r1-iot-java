@@ -20,8 +20,7 @@ public class GoogleGemini implements IAIService, IWebAlias {
     @Autowired
     private RestTemplate restTemplate;
 
-    private static final String APP_KEY = System.getenv("GOOGLE_KEY");
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+APP_KEY; // 替换为实际的 API URL
+    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="; // 替换为实际的 API URL
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -53,7 +52,7 @@ public class GoogleGemini implements IAIService, IWebAlias {
     }
 
     @Override
-    public String responseToUser(JsonNode request) {
+    public String responseToUser(JsonNode request, String key) {
         // 设置请求头
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -64,7 +63,7 @@ public class GoogleGemini implements IAIService, IWebAlias {
 
         // 发送 POST 请求
         ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                API_URL,
+                API_URL+key,
                 HttpMethod.POST,
                 requestEntity,
                 JsonNode.class

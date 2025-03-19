@@ -15,6 +15,9 @@ interface DeviceFormProps {
 
 const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1Resources, formInstance}) => {
 
+    useEffect(() => {
+        console.log("ini", initValues)
+    }, [initValues]);
 
     return (
 

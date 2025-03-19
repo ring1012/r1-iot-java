@@ -8,6 +8,6 @@ public interface IAIService {
 
     JsonNode buildRequest(String userInput);
 
-    String responseToUser(JsonNode request);
+    String responseToUser(JsonNode request, String key);
 
 }
