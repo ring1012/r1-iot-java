@@ -12,7 +12,7 @@ import 'dayjs/locale/zh-cn';
 import zhCN from 'antd/locale/zh_CN';
 
 import './index.css';
-import Home from "./pages/Home";
+import Home from "./pages/home";
 
 dayjs.locale('zh-cn');
 

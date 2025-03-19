@@ -4,15 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-@Service
+@Service("Grok")
 @Slf4j
-public class GrokAiX implements AiEnhanceService {
+public class GrokAiX implements IAIService, IWebAlias {
 
     private static final String API_URL = "https://api.x.ai/v1/chat/completions";
     private static final String AUTHORIZATION_TOKEN = "Bearer "+System.getenv("XAI_KEY");
@@ -97,5 +98,10 @@ public class GrokAiX implements AiEnhanceService {
             return "AI服务出错了，返回码：";
         }
 
+    }
+
+    @Override
+    public String getAlias() {
+        return "Grok";
     }
 }

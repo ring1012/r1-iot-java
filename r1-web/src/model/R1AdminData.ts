@@ -1,8 +1,38 @@
+export interface AIConfig {
+    choice: string;
+    key: string;
+}
+
+export interface HASSConfig {
+    endpoint: string;
+    token: string;
+}
+
+export interface NewsConfig {
+    choice: string;
+}
+
+export interface Device {
+    id: string;
+    name: string;
+    aiConfig: AIConfig;
+    hassConfig: HASSConfig;
+    newsConfig: NewsConfig;
+}
+
+export interface ServiceAliasName {
+    serviceName: string;
+    aliasName: string;
+}
+
+export interface R1Resources {
+    aiList: ServiceAliasName[];
+    musicList: ServiceAliasName[];
+    audioList: ServiceAliasName[];
+}
+
 export interface R1AdminData {
-  defaultAI: "Gemini" | "Grok"; // 只能是 Gemini 或 Grok
-  chat: {
-    systemInfo: string; // 字符串类型
-    chatAI: "Gemini" | "Grok"; // 只能是 Gemini 或 Grok
-  };
-  music: "qq" | "neast"; // 只能是 qq 或 neast
+    r1Resources: R1Resources;
+    devices: Device[];
+    currentDeviceId: string;
 }

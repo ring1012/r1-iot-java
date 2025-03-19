@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.helper.AsrServerHandler;
 import huan.diy.r1iot.model.AsrResult;
+import huan.diy.r1iot.util.R1IotUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -16,8 +17,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,8 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @Component
+@Slf4j
 public class TcpServerController {
-    private static final Logger logger = LoggerFactory.getLogger(TcpServerController.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     // 远程服务器地址
     private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
@@ -67,11 +67,11 @@ public class TcpServerController {
                     });
 
             ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
-            logger.info("TCP Server started on port {}", port);
+            log.info("TCP Server started on port {}", port);
 
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
-            logger.error("TCP Server interrupted", e);
+            log.error("TCP Server interrupted", e);
             throw new RuntimeException(e);
         } finally {
             bossGroup.shutdownGracefully();
@@ -93,12 +93,14 @@ public class TcpServerController {
                 ByteBuf data = (ByteBuf) msg;
                 forwardToRemoteServer(ctx, data);
             } else {
-                logger.error("Received unknown message type: {}", msg.getClass());
+                log.error("Received unknown message type: {}", msg.getClass());
                 ctx.close();
             }
         }
 
         private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
+            log.info(data.toString(StandardCharsets.UTF_8));
+            setupCurrentDevice(data.toString(StandardCharsets.UTF_8));
             Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
             if (remoteChannel != null && remoteChannel.isActive()) {
                 remoteChannel.writeAndFlush(data.retain());
@@ -115,18 +117,30 @@ public class TcpServerController {
 
                     newRemoteChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
                         ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(null);
-                        logger.info("Remote server connection closed");
+                        log.info("Remote server connection closed");
                     });
                 } else {
-                    logger.error("Failed to connect to remote server: {}", f.cause().getMessage());
+                    log.error("Failed to connect to remote server: {}", f.cause().getMessage());
                     ctx.close();
                 }
             });
         }
 
+        private void setupCurrentDevice(String r1Input) {
+            if (!r1Input.contains("Content-Length:0")) {
+                return;
+            }
+            String[] lines = r1Input.trim().split("\n");
+            String[] infos = lines[lines.length - 1].trim().split("UI:");
+            if (infos.length != 2) {
+                return;
+            }
+            R1IotUtils.setCurrentDeviceId(infos[1]);
+        }
+
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            logger.error("TCP Server error", cause);
+            log.error("TCP Server error", cause);
             ctx.close();
         }
 
@@ -136,7 +150,7 @@ public class TcpServerController {
             if (remoteChannel != null) {
                 remoteChannel.close();
             }
-            logger.info("Client disconnected, remote channel closed");
+            log.info("Client disconnected, remote channel closed");
         }
     }
 
@@ -153,7 +167,7 @@ public class TcpServerController {
             if (msg instanceof ByteBuf) {
                 ByteBuf responseData = (ByteBuf) msg;
                 String data = responseData.toString(StandardCharsets.UTF_8);
-                logger.info("each data from remote server: {}", data);
+                log.info("each data from remote server: {}", data);
 
                 AsrResult asrResult = asrServerHandler.handle(data);
                 Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
@@ -181,9 +195,9 @@ public class TcpServerController {
                         break;
 
                 }
-                logger.info("from R1: {}", accumulatedData.toString());
+                log.info("from R1: {}", accumulatedData.toString());
                 String aiReply = asrServerHandler.enhance(accumulatedData.toString());
-                logger.info("from AI: {}", aiReply);
+                log.info("from AI: {}", aiReply);
                 if (aiReply == null) {
                     clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
                     return;
@@ -197,14 +211,14 @@ public class TcpServerController {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof IdleStateEvent) {
-                logger.info("Sending heartbeat to remote server");
+                log.info("Sending heartbeat to remote server");
                 ctx.writeAndFlush(ctx.alloc().buffer().writeBytes("HEARTBEAT".getBytes()));
             }
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            logger.error("Remote server handler error", cause);
+            log.error("Remote server handler error", cause);
             ctx.close();
         }
     }

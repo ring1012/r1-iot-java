@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -13,8 +14,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Collections;
 
 @Slf4j
-@Service
-public class GoogleGemini implements AiEnhanceService {
+@Service("Gemini")
+public class GoogleGemini implements IAIService, IWebAlias {
 
     @Autowired
     private RestTemplate restTemplate;
@@ -92,5 +93,10 @@ public class GoogleGemini implements AiEnhanceService {
             log.error("call ai failed: {}", responseEntity.getStatusCode());
             return "AI服务出错了，返回码：" + responseEntity.getStatusCode().value() ;
         }
+    }
+
+    @Override
+    public String getAlias() {
+        return "Gemini";
     }
 }
