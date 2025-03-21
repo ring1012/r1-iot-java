@@ -4,6 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 public interface IR1Service {
 
-    JsonNode replaceOutPut(JsonNode jsonNode);
+    JsonNode replaceOutPut(JsonNode jsonNode, String deviceId);
 
 }

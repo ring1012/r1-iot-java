@@ -90,7 +90,9 @@ const Home: React.FC = () => {
             name: `音箱${myDevices.length + 1}`,
             aiConfig: {
                 choice: "Grok",
-                key: ""
+                key: "",
+                systemPrompt:"你是一个智能音箱",
+                chatHistoryNum: 5
             },
             hassConfig: {
                 endpoint: "",

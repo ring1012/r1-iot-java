@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 @Service("cn.yunzhisheng.setting")
 public class IotServiceImpl implements IR1Service {
     @Override
-    public JsonNode replaceOutPut(JsonNode jsonNode) {
+    public JsonNode replaceOutPut(JsonNode jsonNode, String deviceId) {
         return jsonNode;
     }
 }

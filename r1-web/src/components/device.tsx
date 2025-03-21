@@ -1,5 +1,5 @@
 import React, {useEffect} from "react";
-import {Button, Collapse, Form, FormInstance, Input, message, Select, Tabs} from "antd";
+import {Button, Collapse, Form, FormInstance, Input, InputNumber, message, Select, Tabs} from "antd";
 import {SaveOutlined} from "@ant-design/icons";
 import {Device, R1Resources} from "../model/R1AdminData";
 
@@ -40,6 +40,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
                     </Form.Item>
                     <Form.Item name={["aiConfig", "key"]} label="AI Key" >
                         <Input className="form-input" />
+                    </Form.Item>
+                    <Form.Item name={["aiConfig", "systemPrompt"]} label="AI系统提示词" >
+                        <Input className="form-input" placeholder={"你是一个智能音箱"} />
+                    </Form.Item>
+                    <Form.Item name={["aiConfig", "chatHistoryNum"]} label="AI聊天上下文" >
+                        <InputNumber className="form-input" />
                     </Form.Item>
                 </Panel>
 

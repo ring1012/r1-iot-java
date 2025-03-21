@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 public class NewsServiceImpl implements IR1Service {
 
     @Override
-    public JsonNode replaceOutPut(JsonNode jsonNode) {
+    public JsonNode replaceOutPut(JsonNode jsonNode, String deviceId) {
         return jsonNode;
     }
 

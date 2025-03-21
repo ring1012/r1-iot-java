@@ -22,6 +22,8 @@ public class Device {
     public static class AIConfig {
         private String choice;
         private String key;
+        private String systemPrompt;
+        private int chatHistoryNum;
     }
 
     // Static inner class for HASSConfig

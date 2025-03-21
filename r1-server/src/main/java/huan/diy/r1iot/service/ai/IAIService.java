@@ -1,12 +1,13 @@
 package huan.diy.r1iot.service.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import huan.diy.r1iot.model.Message;
+
+import java.util.List;
 
 public interface IAIService {
 
-    String systemInfo = "你是一个智能音箱，简短回答问题。";
-
-    JsonNode buildRequest(String userInput);
+    JsonNode buildRequest(String userInput, List<Message> history, String systemPrompt);
 
     String responseToUser(JsonNode request, String key);
 

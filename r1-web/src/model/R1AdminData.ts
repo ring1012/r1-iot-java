@@ -1,6 +1,8 @@
 export interface AIConfig {
     choice: string;
     key: string;
+    systemPrompt: string;
+    chatHistoryNum: number;
 }
 
 export interface HASSConfig {

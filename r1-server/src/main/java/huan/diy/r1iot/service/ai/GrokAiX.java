@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
 
 @Service("Grok")
 @Slf4j
@@ -24,7 +27,7 @@ public class GrokAiX implements IAIService, IWebAlias {
     private RestTemplate restTemplate;
 
     @Override
-    public JsonNode buildRequest(String userInput) {
+    public JsonNode buildRequest(String userInput, List<Message> history, String systemPrompt) {
         // 创建请求的JSON结构
         ObjectNode requestNode = objectMapper.createObjectNode();
         requestNode.put("model", MODEL);
@@ -34,10 +37,19 @@ public class GrokAiX implements IAIService, IWebAlias {
         // 创建messages数组
         ArrayNode messagesArray = objectMapper.createArrayNode();
 
+
+        // 添加历史消息
+        for (Message message : history) {
+            ObjectNode historyMessage = objectMapper.createObjectNode();
+            historyMessage.put("role", message.getRole()); // 假设Message类有getRole()方法
+            historyMessage.put("content", message.getContent()); // 假设Message类有getContent()方法
+            messagesArray.add(historyMessage);
+        }
+
         // 添加系统消息
         ObjectNode systemMessage = objectMapper.createObjectNode();
         systemMessage.put("role", "system");
-        systemMessage.put("content", systemInfo);
+        systemMessage.put("content", systemPrompt);
         messagesArray.add(systemMessage);
 
         // 添加用户消息

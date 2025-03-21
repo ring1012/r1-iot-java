@@ -14,9 +14,9 @@ public class ChatServiceImpl implements IR1Service {
     private AiFactory aiFactory;
 
     @Override
-    public JsonNode replaceOutPut(JsonNode jsonNode) {
+    public JsonNode replaceOutPut(JsonNode jsonNode, String deviceId) {
         String userInput = jsonNode.get("text").asText();
-        String reply = aiFactory.responseToUser(userInput);
+        String reply = aiFactory.responseToUser(userInput, deviceId);
 
         ObjectNode generalNode = (ObjectNode) jsonNode.path("general");
         generalNode.put("text", reply);

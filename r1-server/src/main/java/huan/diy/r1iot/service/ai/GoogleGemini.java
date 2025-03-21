@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Service("Gemini")
@@ -24,10 +26,19 @@ public class GoogleGemini implements IAIService, IWebAlias {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public JsonNode buildRequest(String userInput) {
+    public JsonNode buildRequest(String userInput, List<Message> history, String systemPrompt) {
         // 创建 JSON 请求体
         ObjectNode requestBody = objectMapper.createObjectNode();
         ArrayNode contents = objectMapper.createArrayNode();
+
+        for (Message message : history) {
+            ObjectNode historyMessage = objectMapper.createObjectNode();
+            historyMessage.put("role", message.getRole()); // 假设 Message 类有 getRole() 方法
+            ArrayNode historyParts = objectMapper.createArrayNode();
+            historyParts.add(objectMapper.createObjectNode().put("text", message.getContent())); // 假设 Message 类有 getContent() 方法
+            historyMessage.set("parts", historyParts);
+            contents.add(historyMessage);
+        }
 
         // 添加用户消息
         ObjectNode userMessage = objectMapper.createObjectNode();
@@ -41,7 +52,7 @@ public class GoogleGemini implements IAIService, IWebAlias {
         ObjectNode modelMessage = objectMapper.createObjectNode();
         modelMessage.put("role", "model");
         ArrayNode modelParts = objectMapper.createArrayNode();
-        modelParts.add(objectMapper.createObjectNode().put("text", systemInfo));
+        modelParts.add(objectMapper.createObjectNode().put("text", systemPrompt));
         modelMessage.set("parts", modelParts);
         contents.add(modelMessage);
 

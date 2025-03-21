@@ -100,7 +100,8 @@ public class TcpServerController {
 
         private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
             log.info(data.toString(StandardCharsets.UTF_8));
-            setupCurrentDevice(data.toString(StandardCharsets.UTF_8));
+            String deviceId = setupCurrentDevice(data.toString(StandardCharsets.UTF_8));
+            ctx.channel().attr(ChannelAttributes.DEVICE_ID).set(deviceId);
             Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
             if (remoteChannel != null && remoteChannel.isActive()) {
                 remoteChannel.writeAndFlush(data.retain());
@@ -113,6 +114,7 @@ public class TcpServerController {
                     Channel newRemoteChannel = f.channel();
                     ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(newRemoteChannel);
                     newRemoteChannel.attr(ChannelAttributes.CLIENT_CHANNEL).set(ctx.channel());
+                    newRemoteChannel.attr(ChannelAttributes.DEVICE_ID).set(deviceId);
                     newRemoteChannel.writeAndFlush(data.retain());
 
                     newRemoteChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
@@ -126,16 +128,18 @@ public class TcpServerController {
             });
         }
 
-        private void setupCurrentDevice(String r1Input) {
+        private String setupCurrentDevice(String r1Input) {
             if (!r1Input.contains("Content-Length:0")) {
-                return;
+                return null;
             }
             String[] lines = r1Input.trim().split("\n");
             String[] infos = lines[lines.length - 1].trim().split("UI:");
             if (infos.length != 2) {
-                return;
+                return null;
             }
-            R1IotUtils.setCurrentDeviceId(infos[1]);
+            String deviceId = infos[1];
+            R1IotUtils.setCurrentDeviceId(deviceId);
+            return deviceId;
         }
 
         @Override
@@ -196,7 +200,9 @@ public class TcpServerController {
 
                 }
                 log.info("from R1: {}", accumulatedData.toString());
-                String aiReply = asrServerHandler.enhance(accumulatedData.toString());
+                String aiReply = asrServerHandler.enhance(accumulatedData.toString(),
+                        ctx.channel().attr(ChannelAttributes.DEVICE_ID).get());
+
                 log.info("from AI: {}", aiReply);
                 if (aiReply == null) {
                     clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
@@ -227,5 +233,6 @@ public class TcpServerController {
     private static class ChannelAttributes {
         private static final AttributeKey<Channel> REMOTE_CHANNEL = AttributeKey.valueOf("REMOTE_CHANNEL");
         private static final AttributeKey<Channel> CLIENT_CHANNEL = AttributeKey.valueOf("CLIENT_CHANNEL");
+        private static final AttributeKey<String> DEVICE_ID = AttributeKey.valueOf("DEVICE_ID");
     }
 }

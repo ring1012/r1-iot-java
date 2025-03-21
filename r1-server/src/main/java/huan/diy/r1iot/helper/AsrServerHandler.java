@@ -64,7 +64,7 @@ public class AsrServerHandler {
     }
 
 
-    public String enhance(String lstRespStr) {
+    public String enhance(String lstRespStr, String deviceId) {
         JsonNode jsonNode;
         String lastLine;
         try {
@@ -80,7 +80,7 @@ public class AsrServerHandler {
 
         String serviceName = jsonNode.get("service").asText();
         IR1Service r1Service = r1ServiceMap.getOrDefault(serviceName, defaultServiceImpl);
-        JsonNode fixedJsonNode = r1Service.replaceOutPut(jsonNode);
+        JsonNode fixedJsonNode = r1Service.replaceOutPut(jsonNode, deviceId);
 
         String modifiedJson = lastLine;
         try {

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class MusicServiceImpl implements IR1Service {
     private static final ObjectMapper objectMapper = new ObjectMapper();
     @Override
-    public JsonNode replaceOutPut(JsonNode jsonNode) {
+    public JsonNode replaceOutPut(JsonNode jsonNode, String deviceId) {
         try {
             return objectMapper.readTree("""
                     
