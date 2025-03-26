@@ -21,9 +21,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @Slf4j
@@ -98,9 +107,53 @@ public class TcpServerController {
             }
         }
 
+
+        public class PCMDataAggregator implements Runnable {
+            private static final Queue<byte[]> audioQueue = new LinkedList<>(); // Queue to store PCM data
+
+            private final byte[] data;
+
+            public PCMDataAggregator(byte[] data) {
+                log.info("from client: {}", new String(data, StandardCharsets.ISO_8859_1)); // Optional logging for debugging
+                this.data = data;
+            }
+
+            @Override
+            public void run() {
+                // Add incoming PCM data to the queue
+                audioQueue.offer(data);
+
+                // Start a timer to process data after TIMEOUT seconds
+                try {
+                    writeToFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            // Method to handle file writing
+            private void writeToFile() throws IOException {
+                // Create a unique filename with the current timestamp
+                File outputFile = new File("samples/" + new Date().getTime() + ".raw");
+
+                // Ensure parent directories exist
+                if (!outputFile.getParentFile().exists()) {
+                    outputFile.getParentFile().mkdirs();
+                }
+
+                // Write data to file (append mode)
+                try (FileOutputStream fos = new FileOutputStream(outputFile, true)) {
+                    fos.write(data);  // Write the byte[] directly to the file
+                    fos.flush();       // Ensure data is written to disk
+                }
+            }
+
+        }
+
         private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
-            log.info(data.toString(StandardCharsets.UTF_8));
-            String deviceId = setupCurrentDevice(data.toString(StandardCharsets.UTF_8));
+
+//            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();
+            String deviceId = setupCurrentDevice(data.toString(StandardCharsets.ISO_8859_1));
             ctx.channel().attr(ChannelAttributes.DEVICE_ID).set(deviceId);
             Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
             if (remoteChannel != null && remoteChannel.isActive()) {
@@ -171,7 +224,7 @@ public class TcpServerController {
             if (msg instanceof ByteBuf) {
                 ByteBuf responseData = (ByteBuf) msg;
                 String data = responseData.toString(StandardCharsets.UTF_8);
-                log.info("each data from remote server: {}", data);
+//                log.info("each data from remote server: {}", data);
 
                 AsrResult asrResult = asrServerHandler.handle(data);
                 Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
