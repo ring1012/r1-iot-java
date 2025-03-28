@@ -24,10 +24,16 @@ import java.util.List;
 @Slf4j
 public class GrokAiX implements IAIService, IWebAlias {
 
-    private static final String API_URL = "https://api.x.ai/v1/chat/completions";
-    private static final String MODEL = "grok-2-latest";
+    protected String API_URL;
+    protected String MODEL;
+
+    public GrokAiX() {
+        this.API_URL = "https://api.x.ai/v1/chat/completions";
+        this.MODEL = "grok-2-latest";
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
     {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);  // 全局忽略未知字段
     }
@@ -83,7 +89,7 @@ public class GrokAiX implements IAIService, IWebAlias {
         // 创建HTTP请求实体
         HttpEntity<JsonNode> httpEntity = new HttpEntity<>(request, headers);
 
-        try{
+        try {
             // 发送POST请求
             ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
                     API_URL,
@@ -112,8 +118,8 @@ public class GrokAiX implements IAIService, IWebAlias {
             }
 
             // 如果请求失败或未找到内容，返回默认消息
-            return "AI服务出错了，返回码："+responseEntity.getStatusCode();
-        }catch (Exception e) {
+            return "AI服务出错了，返回码：" + responseEntity.getStatusCode();
+        } catch (Exception e) {
             log.error("responseToUser error", e);
             return "AI服务出错了，返回码：";
         }
@@ -121,7 +127,7 @@ public class GrokAiX implements IAIService, IWebAlias {
     }
 
     @Override
-    public <T> T askHass(String userInput, JsonNode hassEntities, String key,  Class<T> clazz) {
+    public <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz) {
         List<Message> messages = new ArrayList<>();
         messages.add(new Message("system", hassEntities.toString()));
         messages.add(new Message("system", """
