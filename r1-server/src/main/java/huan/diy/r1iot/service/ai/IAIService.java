@@ -11,4 +11,6 @@ public interface IAIService {
 
     String responseToUser(JsonNode request, String key);
 
+    <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz);
+
 }

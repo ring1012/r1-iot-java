@@ -1,9 +1,13 @@
 package huan.diy.r1iot.service.ai;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.anno.AIDescription;
+import huan.diy.r1iot.anno.AIEnums;
 import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +16,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service("Grok")
@@ -22,6 +28,9 @@ public class GrokAiX implements IAIService, IWebAlias {
     private static final String MODEL = "grok-2-latest";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    {
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);  // 全局忽略未知字段
+    }
 
     @Autowired
     private RestTemplate restTemplate;
@@ -110,6 +119,64 @@ public class GrokAiX implements IAIService, IWebAlias {
         }
 
     }
+
+    @Override
+    public <T> T askHass(String userInput, JsonNode hassEntities, String key,  Class<T> clazz) {
+        List<Message> messages = new ArrayList<>();
+        messages.add(new Message("system", hassEntities.toString()));
+        messages.add(new Message("system", """
+                从用户输入中提取以下信息：
+                1. 动作（action）：用户想要执行的操作，如打开、关闭、调节亮度等。 打开就是ON，关闭就是OFF，查询就是QUERY，设定就是SET。
+                2. 实体ID（entityId）：与动作相关的实体的ID。
+                3. 其他信息（其他）：用户提供的其他信息，如温度、亮度等。
+                """));
+        messages.add(new Message("user", userInput));
+
+        ObjectNode requestNode = objectMapper.createObjectNode();
+        requestNode.put("model", MODEL);
+        requestNode.put("stream", false);
+        requestNode.put("temperature", 0);
+        ArrayNode messagesArray = objectMapper.valueToTree(messages);
+
+        requestNode.set("messages", messagesArray);
+
+        ObjectNode formatNode = objectMapper.createObjectNode();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            ObjectNode fieldNode = objectMapper.createObjectNode();
+
+            // 处理AIDescription注解
+            AIDescription desc = field.getAnnotation(AIDescription.class);
+            if (desc != null) {
+                fieldNode.put("type", desc.type());
+                fieldNode.put("description", desc.value());
+            } else {
+                fieldNode.put("type", "string");
+            }
+
+            // 处理AIEnum注解
+            AIEnums enumAnnotation = field.getAnnotation(AIEnums.class);
+            if (enumAnnotation != null && enumAnnotation.value().length > 0) {
+                fieldNode.putPOJO("enum", enumAnnotation.value());
+            }
+
+            formatNode.set(field.getName(), fieldNode);
+        }
+
+        ObjectNode schemaNode = objectMapper.createObjectNode();
+        schemaNode.put("type", "json_object");
+        schemaNode.set("schema", formatNode);
+        requestNode.set("response_format", schemaNode);
+
+        String aiReply = responseToUser(requestNode, key);
+        try {
+            return objectMapper.readValue(aiReply, clazz);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
 
     @Override
     public String getAlias() {

@@ -1,8 +1,10 @@
 package huan.diy.r1iot.service.ai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.Device;
+import huan.diy.r1iot.model.IotAiResp;
 import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.util.R1IotUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +51,13 @@ public class AiFactory {
 
         CACHES.put(deviceId, msgs);
         return aiReply;
+    }
+
+    public IotAiResp hassByAi(String deviceId, String userInput, JsonNode hassEntities) {
+        Device device = R1IotUtils.getDeviceMap().get(deviceId);
+        IAIService aiSvc = aiMap.get(device.getAiConfig().getChoice());
+
+        return aiSvc.askHass(userInput, hassEntities, device.getAiConfig().getKey(), IotAiResp.class);
     }
 
 }

@@ -106,6 +106,12 @@ public class GoogleGemini implements IAIService, IWebAlias {
     }
 
     @Override
+    public <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz) {
+        return null;
+    }
+
+
+    @Override
     public String getAlias() {
         return "Gemini";
     }
