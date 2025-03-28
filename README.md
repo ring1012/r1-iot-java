@@ -237,8 +237,9 @@
 
 #### 步骤
 1. 找一台带docker的服务器，可以是家里的某台nas/windows机，最好能访问外网（因为部分大模型需要外网环境）
-2. docker run --restart=always --name="r1"  -it -d -p 80:80 -e password=123456 registry.cn-hangzhou.aliyuncs.com/ring1012/r1:2025-03-26  请把123456替换成你喜欢的密码
+2. docker run --restart=always --name="r1"  -it -d -p 80:80 -p 8080:8080 -e password=123456 registry.cn-hangzhou.aliyuncs.com/ring1012/r1:2025-03-28  请把123456替换成你喜欢的密码
 3. 家里的路由器，找到自定义Hosts，添加一行 **192.168.2.66 asrv3.hivoice.cn** 其中192.168.2.66是你的服务器ip，可以是局域网ip，也可以是公网ip
+   如果是运行在旁路由上：docker run --restart=always --name="r1" -it -d --network=host -e password=123456 registry.cn-hangzhou.aliyuncs.com/ring1012/r1:2025-03-28
 4. 打开192.168.2.66:8080, 输入你上面配置的密码。
 5. 喊一句小讯小讯，刷新一下页面，设备号自动添加。
 6. 配置自己喜欢的ai服务，enjoy

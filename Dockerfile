@@ -1,5 +1,5 @@
 # 第一阶段：构建 jar 包
-FROM azul/zulu-openjdk:17 as builder
+FROM eclipse-temurin:17.0.14_7-jdk as builder
 
 ENV MAVEN_VERSION=3.9.9
 ENV MAVEN_HOME=/opt/maven
@@ -21,7 +21,7 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 # 第二阶段：运行 jar 包
-FROM azul/zulu-openjdk:17
+FROM eclipse-temurin:17.0.14_7-jdk
 
 WORKDIR /app
 

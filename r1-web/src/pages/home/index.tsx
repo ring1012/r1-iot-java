@@ -23,6 +23,8 @@ const Home: React.FC = () => {
 
     const [form] = Form.useForm();
 
+    const apiURL = process.env.REACT_APP_API_URL;
+
     useEffect(() => {
         const activeDevice = devices.find((device) => device.id === activeDeviceId);
         console.log("activeDeviceId", activeDeviceId)
@@ -36,7 +38,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axiosInstance.get<R1AdminData>('http://localhost:8080/admin/resources');
+                const response = await axiosInstance.get<R1AdminData>(`${apiURL}admin/resources`);
                 const respData = response.data;
                 setR1AdminData(respData);
                 setDevices(respData.devices);
@@ -45,7 +47,7 @@ const Home: React.FC = () => {
 
 
 
-                if (!respData.devices) {
+                if (!respData.devices.length) {
                     handleAddDevice([], respData.currentDeviceId);
                     return;
                 }
@@ -92,7 +94,7 @@ const Home: React.FC = () => {
                 choice: "Grok",
                 key: "",
                 systemPrompt:"你是一个智能音箱",
-                chatHistoryNum: 5
+                chatHistoryNum: 8
             },
             hassConfig: {
                 endpoint: "",
@@ -118,7 +120,7 @@ const Home: React.FC = () => {
         setDevices(updatedDevices);
 
         try {
-            await axiosInstance.post('http://localhost:8080/admin/device', values)
+            await axiosInstance.post(`${apiURL}admin/device`, values)
             message.success("设备配置保存成功！", 2);
 
         } catch (err) {
@@ -152,7 +154,7 @@ const Home: React.FC = () => {
 
     const handlePasswordSubmit = async (password: string) => {
         try {
-            const response = await axiosInstance.post('http://localhost:8080/auth', {password});
+            const response = await axiosInstance.post(`${apiURL}auth`, {password});
             if (response.status === 200) {
                 window.localStorage.setItem("token", response.data);
 
