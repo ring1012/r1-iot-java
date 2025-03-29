@@ -1,46 +1,26 @@
 package huan.diy.r1iot.configure;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.helper.AsrServerHandler;
-import huan.diy.r1iot.model.AsrResult;
-import huan.diy.r1iot.util.R1IotUtils;
+import huan.diy.r1iot.helper.RemoteServerHandler;
+import huan.diy.r1iot.helper.TcpForwardHandler;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Component
 @Slf4j
 public class TcpServerController {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    // 远程服务器地址
-    private static final String REMOTE_HOST = "47.102.50.144";  // 目标服务器 IP
-    private static final int REMOTE_PORT = 80;  // 远程服务器的端口
     private final Bootstrap remoteBootstrap = new Bootstrap();
 
     @Autowired
@@ -60,7 +40,7 @@ public class TcpServerController {
                     @Override
                     protected void initChannel(SocketChannel ch) {
                         ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));
-                        ch.pipeline().addLast(new RemoteServerHandler());
+                        ch.pipeline().addLast(new RemoteServerHandler(asrServerHandler));
                     }
                 });
 
@@ -71,7 +51,7 @@ public class TcpServerController {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(new TcpForwardHandler());
+                            ch.pipeline().addLast(new TcpForwardHandler(remoteBootstrap));
                         }
                     });
 
@@ -94,198 +74,5 @@ public class TcpServerController {
 
     }
 
-    // 自定义 TCP 转发处理器
-    private class TcpForwardHandler extends ChannelInboundHandlerAdapter {
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            if (msg instanceof ByteBuf) {
-                ByteBuf data = (ByteBuf) msg;
-                forwardToRemoteServer(ctx, data);
-            } else {
-                log.error("Received unknown message type: {}", msg.getClass());
-                ctx.close();
-            }
-        }
 
-
-        public class PCMDataAggregator implements Runnable {
-            private static final Queue<byte[]> audioQueue = new LinkedList<>(); // Queue to store PCM data
-
-            private final byte[] data;
-
-            public PCMDataAggregator(byte[] data) {
-                log.info("from client: {}", new String(data, StandardCharsets.ISO_8859_1)); // Optional logging for debugging
-                this.data = data;
-            }
-
-            @Override
-            public void run() {
-                // Add incoming PCM data to the queue
-                audioQueue.offer(data);
-
-                // Start a timer to process data after TIMEOUT seconds
-                try {
-                    writeToFile();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            // Method to handle file writing
-            private void writeToFile() throws IOException {
-                // Create a unique filename with the current timestamp
-                File outputFile = new File("samples/" + new Date().getTime() + ".raw");
-
-                // Ensure parent directories exist
-                if (!outputFile.getParentFile().exists()) {
-                    outputFile.getParentFile().mkdirs();
-                }
-
-                // Write data to file (append mode)
-                try (FileOutputStream fos = new FileOutputStream(outputFile, true)) {
-                    fos.write(data);  // Write the byte[] directly to the file
-                    fos.flush();       // Ensure data is written to disk
-                }
-            }
-
-        }
-
-        private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
-
-//            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();
-            String deviceId = setupCurrentDevice(data.toString(StandardCharsets.ISO_8859_1));
-            ctx.channel().attr(ChannelAttributes.DEVICE_ID).set(deviceId);
-            Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).get();
-            if (remoteChannel != null && remoteChannel.isActive()) {
-                remoteChannel.writeAndFlush(data.retain());
-                return;
-            }
-
-            ChannelFuture future = remoteBootstrap.connect(new InetSocketAddress(REMOTE_HOST, REMOTE_PORT));
-            future.addListener((ChannelFutureListener) f -> {
-                if (f.isSuccess()) {
-                    Channel newRemoteChannel = f.channel();
-                    ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(newRemoteChannel);
-                    newRemoteChannel.attr(ChannelAttributes.CLIENT_CHANNEL).set(ctx.channel());
-                    newRemoteChannel.attr(ChannelAttributes.DEVICE_ID).set(deviceId);
-                    newRemoteChannel.writeAndFlush(data.retain());
-
-                    newRemoteChannel.closeFuture().addListener((ChannelFutureListener) closeFuture -> {
-                        ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).set(null);
-                        log.info("Remote server connection closed");
-                    });
-                } else {
-                    log.error("Failed to connect to remote server: {}", f.cause().getMessage());
-                    ctx.close();
-                }
-            });
-        }
-
-        private String setupCurrentDevice(String r1Input) {
-            if (!r1Input.contains("Content-Length:0")) {
-                return null;
-            }
-            String[] lines = r1Input.trim().split("\n");
-            String[] infos = lines[lines.length - 1].trim().split("UI:");
-            if (infos.length != 2) {
-                return null;
-            }
-            String deviceId = infos[1];
-            R1IotUtils.setCurrentDeviceId(deviceId);
-            return deviceId;
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            log.error("TCP Server error", cause);
-            ctx.close();
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) {
-            Channel remoteChannel = ctx.channel().attr(ChannelAttributes.REMOTE_CHANNEL).getAndSet(null);
-            if (remoteChannel != null) {
-                remoteChannel.close();
-            }
-            log.info("Client disconnected, remote channel closed");
-        }
-    }
-
-    // 远程服务器处理器
-    private class RemoteServerHandler extends ChannelInboundHandlerAdapter {
-        private StringBuffer accumulatedData = new StringBuffer();
-
-        public synchronized void appendData(String data) {
-            accumulatedData.append(data);
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            if (msg instanceof ByteBuf) {
-                ByteBuf responseData = (ByteBuf) msg;
-                String data = responseData.toString(StandardCharsets.UTF_8);
-//                log.info("each data from remote server: {}", data);
-
-                AsrResult asrResult = asrServerHandler.handle(data);
-                Channel clientChannel = ctx.channel().attr(ChannelAttributes.CLIENT_CHANNEL).get();
-                if (clientChannel == null) {
-                    return;
-                }
-                switch (asrResult.getType()) {
-                    case DROPPED, SKIP:
-                        clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
-                        return;
-                    case APPEND:
-                        appendData(asrResult.getFixedData());
-                        try {
-                            String[] lines = accumulatedData.toString().split("\n");
-                            JsonNode node = objectMapper.readTree(lines[lines.length - 1]);
-                            if (node.has("responseId")) {
-                                break;
-                            }
-                            return;
-                        } catch (Exception e) {
-                            return;
-                        }
-                    case END:
-                        appendData(asrResult.getFixedData());
-                        break;
-
-                }
-                log.info("from R1: {}", accumulatedData.toString());
-                String aiReply = asrServerHandler.enhance(accumulatedData.toString(),
-                        ctx.channel().attr(ChannelAttributes.DEVICE_ID).get());
-
-                log.info("from AI: {}", aiReply);
-                if (aiReply == null) {
-                    clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
-                    return;
-                }
-
-                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(aiReply.getBytes()));
-                accumulatedData.setLength(0);  // 清空累积的数据
-            }
-        }
-
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            if (evt instanceof IdleStateEvent) {
-                log.info("Sending heartbeat to remote server");
-                ctx.writeAndFlush(ctx.alloc().buffer().writeBytes("HEARTBEAT".getBytes()));
-            }
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            log.error("Remote server handler error", cause);
-            ctx.close();
-        }
-    }
-
-    // Channel 属性键
-    private static class ChannelAttributes {
-        private static final AttributeKey<Channel> REMOTE_CHANNEL = AttributeKey.valueOf("REMOTE_CHANNEL");
-        private static final AttributeKey<Channel> CLIENT_CHANNEL = AttributeKey.valueOf("CLIENT_CHANNEL");
-        private static final AttributeKey<String> DEVICE_ID = AttributeKey.valueOf("DEVICE_ID");
-    }
 }
