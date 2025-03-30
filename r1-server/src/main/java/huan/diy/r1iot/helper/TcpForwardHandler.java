@@ -38,9 +38,7 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
-        log.info("from client: {}", data.toString(StandardCharsets.ISO_8859_1));
-
-
+//        log.info("from client: {}", data.toString(StandardCharsets.ISO_8859_1));
 //            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();
         String deviceId = setupCurrentDevice(data.toString(StandardCharsets.ISO_8859_1));
         ctx.channel().attr(TcpChannelUtils.DEVICE_ID).set(deviceId);

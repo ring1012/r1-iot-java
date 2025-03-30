@@ -104,7 +104,6 @@ public class IotServiceImpl implements IR1Service {
                 // 假设我们需要返回 "entity_id" 和 "name"
                 filteredEntity.put("entity_id", entity.get("entity_id").textValue());
                 filteredEntity.put("name", friendlyName);  // 设置为 friendly_name 或根据需要修改
-
                 // 将过滤后的实体添加到结果数组
                 filteredEntities.add(filteredEntity);
             }
@@ -124,6 +123,8 @@ public class IotServiceImpl implements IR1Service {
             throw new RuntimeException(e);
         }
 
+        String ttsContent = input.get("general").get("text").asText();
+
         String action = aiIot.getAction().trim().toLowerCase();
         switch (action) {
             case "on":
@@ -133,6 +134,7 @@ public class IotServiceImpl implements IR1Service {
                 switchOperation(deviceId, aiIot.getEntityId(), false);
                 break;
             case "query":
+                ttsContent = queryStatus(deviceId, aiIot.getEntityId());
                 break;
             case "set":
                 // todo
@@ -140,7 +142,7 @@ public class IotServiceImpl implements IR1Service {
 
         }
 
-        return input;
+        return R1IotUtils.sampleChatResp(ttsContent);
     }
 
     private void switchOperation(String deviceId, String entityId, boolean on) {
@@ -162,8 +164,30 @@ public class IotServiceImpl implements IR1Service {
             log.info("iot 执行HTTP 返回码：{}", exchange.getStatusCode().toString());
 
         }).start();
+    }
 
+    private String queryStatus(String deviceId, String entityId) {
+        String url = R1IotUtils.getDeviceMap().get(deviceId).getHassConfig().getEndpoint();
+        url = url.endsWith("/") ? url : (url + "/") + "api/states/" + entityId;
+        Device device = R1IotUtils.getDeviceMap().get(deviceId);
+        Device.HASSConfig hassConfig = device.getHassConfig();
 
+        String token = hassConfig.getToken();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + token.trim());
+        HttpEntity<JsonNode> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<JsonNode> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                JsonNode.class
+        );
+        JsonNode resp = response.getBody();
+        String name = resp.get("attributes").get("friendly_name").textValue();
+        String val = resp.get("state").textValue();
+        return name + "是" + val;
     }
 
 }

@@ -3,6 +3,7 @@ package huan.diy.r1iot.helper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.model.AsrHandleType;
 import huan.diy.r1iot.model.AsrResult;
 import huan.diy.r1iot.service.IR1Service;
@@ -12,11 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
 @Component
 public class AsrServerHandler {
+
+    private static final List<String> CHAT2IOT = List.of("打开", "关闭");
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
@@ -77,7 +82,7 @@ public class AsrServerHandler {
             return null;
         }
 
-
+        overrideService(jsonNode);
         String serviceName = jsonNode.get("service").asText();
         IR1Service r1Service = r1ServiceMap.getOrDefault(serviceName, defaultServiceImpl);
         JsonNode fixedJsonNode = r1Service.replaceOutPut(jsonNode, deviceId);
@@ -98,6 +103,20 @@ public class AsrServerHandler {
         // 替换 Content-Length 字段
         String newContentLength = "Content-Length: " + contentLength;
         return newText.replaceAll("Content-Length: \\d+", newContentLength);
+    }
+
+    private void overrideService(JsonNode jsonNode) {
+        String userInput = jsonNode.get("text").asText();
+        boolean needIot = false;
+        for (String each : CHAT2IOT) {
+            if (userInput.contains(each)) {
+                needIot = true;
+                break;
+            }
+        }
+        if (needIot) {
+            ((ObjectNode) jsonNode).put("service", "cn.yunzhisheng.setting");
+        }
     }
 
     private static String replaceLastLine(String text, String newLastLine) {
