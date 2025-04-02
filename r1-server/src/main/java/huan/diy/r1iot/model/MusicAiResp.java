@@ -14,7 +14,7 @@ public class MusicAiResp {
 
     @AIDescription("the name of the music")
     private String musicName;
-//
-//    @AIDescription("the group of my music")
-//    private String group;
+
+    @AIDescription("the keyword for searching musics")
+    private String keyword;
 }

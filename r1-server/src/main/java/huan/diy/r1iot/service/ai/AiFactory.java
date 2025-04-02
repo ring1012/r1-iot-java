@@ -69,7 +69,7 @@ public class AiFactory {
 
         List<Message> messages = new ArrayList<>();
         messages.add(new Message("system", """
-                帮忙抽取歌曲的作者author，歌曲的名称musicName，分组group字段(例如我喜欢的，我收藏的等等)。抽不到就留空
+                帮忙抽取歌曲的作者author，歌曲的名称musicName，都没有的话，就抽取关键字keyword。抽不到就留空
                 """));
         messages.add(new Message("user", userInput));
 
