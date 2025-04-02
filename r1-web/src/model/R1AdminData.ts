@@ -10,6 +10,11 @@ export interface HASSConfig {
     token: string;
 }
 
+export interface MusicConfig {
+    choice: string;
+    endpoint?: string;
+}
+
 export interface NewsConfig {
     choice: string;
 }
@@ -20,6 +25,7 @@ export interface Device {
     aiConfig: AIConfig;
     hassConfig: HASSConfig;
     newsConfig: NewsConfig;
+    musicConfig: MusicConfig;
 }
 
 export interface ServiceAliasName {

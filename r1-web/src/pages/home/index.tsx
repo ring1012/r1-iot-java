@@ -103,6 +103,9 @@ const Home: React.FC = () => {
             newsConfig: {
                 choice: "chinaSound"
             },
+            musicConfig: {
+                choice: "NetEaseMusic"
+            }
         };
         setDevices([...myDevices, newDevice]);
         if(!!newId){

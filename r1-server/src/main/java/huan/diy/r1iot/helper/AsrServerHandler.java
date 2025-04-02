@@ -21,6 +21,7 @@ import java.util.Map;
 public class AsrServerHandler {
 
     private static final List<String> CHAT2IOT = List.of("打开", "关闭");
+    private static final List<String> CHAT2MUSIC = List.of("播放");
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -116,6 +117,17 @@ public class AsrServerHandler {
         }
         if (needIot) {
             ((ObjectNode) jsonNode).put("service", "cn.yunzhisheng.setting");
+        }
+
+        boolean needMusic = false;
+        for (String each : CHAT2MUSIC) {
+            if (userInput.contains(each)) {
+                needMusic = true;
+                break;
+            }
+        }
+        if (needMusic) {
+            ((ObjectNode) jsonNode).put("service", "cn.yunzhisheng.music");
         }
     }
 

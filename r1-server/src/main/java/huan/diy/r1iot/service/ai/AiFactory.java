@@ -6,10 +6,12 @@ import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.IotAiResp;
 import huan.diy.r1iot.model.Message;
+import huan.diy.r1iot.model.MusicAiResp;
 import huan.diy.r1iot.util.R1IotUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +60,20 @@ public class AiFactory {
         IAIService aiSvc = aiMap.get(device.getAiConfig().getChoice());
 
         return aiSvc.askHass(userInput, hassEntities, device.getAiConfig().getKey(), IotAiResp.class);
+    }
+
+    public MusicAiResp musicByAi(String deviceId, String userInput) {
+        Device device = R1IotUtils.getDeviceMap().get(deviceId);
+
+        IAIService aiSvc = aiMap.get(device.getAiConfig().getChoice());
+
+        List<Message> messages = new ArrayList<>();
+        messages.add(new Message("system", """
+                帮忙抽取歌曲的作者author，歌曲的名称musicName，分组group字段(例如我喜欢的，我收藏的等等)。抽不到就留空
+                """));
+        messages.add(new Message("user", userInput));
+
+        return aiSvc.structureResponse(messages, device.getAiConfig().getKey(), MusicAiResp.class);
     }
 
 }

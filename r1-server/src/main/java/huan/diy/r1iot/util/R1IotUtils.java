@@ -31,7 +31,7 @@ public class R1IotUtils {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("code", "ANSWER");
         objectNode.put("matchType", "NOT_UNDERSTAND");
-        objectNode.put("NOT_UNDERSTAND", 0.8);
+        objectNode.put("confidence", 0.8);
         objectNode.put("history", "cn.yunzhisheng.chat");
         objectNode.put("source", "nlu");
         objectNode.put("asr_recongize", ttsContent);

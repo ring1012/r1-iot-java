@@ -110,6 +110,11 @@ public class GoogleGemini implements IAIService, IWebAlias {
         return null;
     }
 
+    @Override
+    public <T> T structureResponse(List<Message> messages, String key, Class<T> clazz) {
+        return null;
+    }
+
 
     @Override
     public String getAlias() {

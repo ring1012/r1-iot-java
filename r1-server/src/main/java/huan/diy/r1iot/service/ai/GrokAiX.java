@@ -127,17 +127,7 @@ public class GrokAiX implements IAIService, IWebAlias {
     }
 
     @Override
-    public <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz) {
-        List<Message> messages = new ArrayList<>();
-        messages.add(new Message("system", hassEntities.toString()));
-        messages.add(new Message("system", """
-                从用户输入中提取以下信息：
-                1. 动作（action）：用户想要执行的操作，如打开、关闭、调节亮度等。 打开就是ON，关闭就是OFF，查询就是QUERY，设定就是SET。
-                2. 实体ID（entityId）：与动作相关的实体的ID。
-                3. 其他信息（其他）：用户提供的其他信息，如温度、亮度等。
-                """));
-        messages.add(new Message("user", userInput));
-
+    public <T> T structureResponse(List<Message> messages, String key, Class<T> clazz) {
         ObjectNode requestNode = objectMapper.createObjectNode();
         requestNode.put("model", MODEL);
         requestNode.put("stream", false);
@@ -168,19 +158,30 @@ public class GrokAiX implements IAIService, IWebAlias {
 
             formatNode.set(field.getName(), fieldNode);
         }
-
         ObjectNode schemaNode = objectMapper.createObjectNode();
         schemaNode.put("type", "json_object");
         schemaNode.set("schema", formatNode);
         requestNode.set("response_format", schemaNode);
-
         String aiReply = responseToUser(requestNode, key);
         try {
             return objectMapper.readValue(aiReply, clazz);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
 
+    @Override
+    public <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz) {
+        List<Message> messages = new ArrayList<>();
+        messages.add(new Message("system", hassEntities.toString()));
+        messages.add(new Message("system", """
+                从用户输入中提取以下信息：
+                1. 动作（action）：用户想要执行的操作，如打开、关闭、调节亮度等。 打开就是ON，关闭就是OFF，查询就是QUERY，设定就是SET。
+                2. 实体ID（entityId）：与动作相关的实体的ID。
+                3. 其他信息（其他）：用户提供的其他信息，如温度、亮度等。
+                """));
+        messages.add(new Message("user", userInput));
+        return structureResponse(messages, key, clazz);
     }
 
 

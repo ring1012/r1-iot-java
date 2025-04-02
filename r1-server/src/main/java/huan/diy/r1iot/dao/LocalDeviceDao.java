@@ -6,6 +6,7 @@ import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +78,7 @@ public class LocalDeviceDao {
 
 
     public int upInsert(Device device) {
+        enrichDeviceUrl(device);
         // 获取文件路径，文件名就是 device.getId() + ".json"
         File deviceFile = new File(DEVICE_CONFIG_PATH, device.getId() + ".json");
 
@@ -102,6 +104,21 @@ public class LocalDeviceDao {
             refresh();
         }
 
+    }
+
+    private void enrichDeviceUrl(Device device) {
+        Optional.ofNullable(device.getHassConfig()).ifPresent(a -> a.setEndpoint(httpSchema(a.getEndpoint())));
+        Optional.ofNullable(device.getMusicConfig()).ifPresent(a -> a.setEndpoint(httpSchema(a.getEndpoint())));
+    }
+
+    private String httpSchema(String input) {
+        if (!StringUtils.hasLength(input)) {
+            return "";
+        }
+        if (input.trim().startsWith("http")) {
+            return input.trim();
+        }
+        return "http://" + input.trim();
     }
 
 
