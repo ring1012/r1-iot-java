@@ -93,7 +93,7 @@ public class AIDirect {
         assistants.put(deviceId, AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
                 .tools(new BoxDecision(device, musicServiceMap, audioServiceMap, hassService))
-                .chatMemory(new GuavaChatMemory(deviceId, 8, TimeUnit.MINUTES, device.getAiConfig().getChatHistoryNum()))
+                .chatMemory(new GuavaChatMemory(deviceId, 8, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum())))
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build());
     }
@@ -102,7 +102,7 @@ public class AIDirect {
         return (context) -> systemPrompt + """
                 
                 注意：
-                你每次只需要使用一个功能，不要同时使用多个功能。
+                不要翻译用户的输入！！
                 """;
     }
 

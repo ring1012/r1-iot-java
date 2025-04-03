@@ -29,6 +29,11 @@ public class R1IotUtils {
     public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
 
 
+    public void remove(){
+        JSON_RET.remove();
+        REPLACE_ANSWER.remove();
+    }
+
     public ObjectMapper objectMapper = new ObjectMapper();
 
     public JsonNode sampleChatResp(String ttsContent) {

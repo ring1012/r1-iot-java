@@ -109,7 +109,7 @@ public class AsrServerHandler {
             // some case, asr only return partial json snippet
             return null;
         } finally {
-            R1IotUtils.JSON_RET.remove();
+            R1IotUtils.remove();
         }
 
 
