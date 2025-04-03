@@ -6,8 +6,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import huan.diy.r1iot.anno.AIDescription;
 import huan.diy.r1iot.anno.AIEnums;
+import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +27,11 @@ import java.util.List;
 @Slf4j
 public class GrokAiX implements IAIService, IWebAlias {
 
-    protected String API_URL;
+    protected String BASE_URL;
     protected String MODEL;
 
     public GrokAiX() {
-        this.API_URL = "https://api.x.ai/v1/chat/completions";
+        this.BASE_URL = "https://api.x.ai/v1";
         this.MODEL = "grok-2-latest";
     }
 
@@ -92,7 +95,7 @@ public class GrokAiX implements IAIService, IWebAlias {
         try {
             // 发送POST请求
             ResponseEntity<JsonNode> responseEntity = restTemplate.exchange(
-                    API_URL,
+                    BASE_URL + "/chat/completions",
                     HttpMethod.POST,
                     httpEntity,
                     JsonNode.class
@@ -168,6 +171,16 @@ public class GrokAiX implements IAIService, IWebAlias {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public ChatLanguageModel buildModel(Device device) {
+        return OpenAiChatModel.builder()
+                .baseUrl(BASE_URL)
+                .apiKey(device.getAiConfig().getKey())
+                .modelName(MODEL)
+                .strictTools(false)
+                .build();
     }
 
     @Override

@@ -25,9 +25,13 @@ public class R1IotUtils {
     @Setter
     private Map<String, Device> deviceMap;
 
+    public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();
+    public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
+
+
     public ObjectMapper objectMapper = new ObjectMapper();
 
-    public JsonNode sampleChatResp(String ttsContent){
+    public JsonNode sampleChatResp(String ttsContent) {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("code", "ANSWER");
         objectNode.put("matchType", "NOT_UNDERSTAND");
@@ -54,10 +58,9 @@ public class R1IotUtils {
         objectNode.put("responseId", "9a83414b09024d9d85df88aa07cad8c9");
 
         return objectNode;
-
-
-
-
     }
+
+
+
 
 }

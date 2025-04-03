@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 public class DeepSeek extends GrokAiX {
 
     public DeepSeek() {
-        this.API_URL = "https://api.deepseek.com/chat/completions";
+        this.BASE_URL = "https://api.deepseek.com";
         this.MODEL = "deepseek-chat";
     }
 

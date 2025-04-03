@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.Message;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
@@ -107,12 +109,17 @@ public class GoogleGemini implements IAIService, IWebAlias {
 
     @Override
     public <T> T askHass(String userInput, JsonNode hassEntities, String key, Class<T> clazz) {
-        return null;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public <T> T structureResponse(List<Message> messages, String key, Class<T> clazz) {
-        return null;
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public ChatLanguageModel buildModel(Device device) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 

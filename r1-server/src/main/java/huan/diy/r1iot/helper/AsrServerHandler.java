@@ -3,33 +3,25 @@ package huan.diy.r1iot.helper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import huan.diy.r1iot.direct.AIDirect;
+import huan.diy.r1iot.direct.Assistant;
 import huan.diy.r1iot.model.AsrHandleType;
 import huan.diy.r1iot.model.AsrResult;
-import huan.diy.r1iot.service.IR1Service;
-import huan.diy.r1iot.service.impl.DefaultServiceImpl;
+import huan.diy.r1iot.util.R1IotUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
 public class AsrServerHandler {
 
-    private static final List<String> CHAT2IOT = List.of("打开", "关闭");
-    private static final List<String> CHAT2MUSIC = List.of("播放");
-
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    private Map<String, IR1Service> r1ServiceMap;
-
-    @Autowired
-    private DefaultServiceImpl defaultServiceImpl;
+    private AIDirect aiDirect;
 
     public AsrResult handle(String data) {
         try {
@@ -83,53 +75,46 @@ public class AsrServerHandler {
             return null;
         }
 
-        overrideService(jsonNode);
-        String serviceName = jsonNode.get("service").asText();
-        IR1Service r1Service = r1ServiceMap.getOrDefault(serviceName, defaultServiceImpl);
-        JsonNode fixedJsonNode = r1Service.replaceOutPut(jsonNode, deviceId);
-
-        String modifiedJson = lastLine;
         try {
-            modifiedJson = objectMapper.writeValueAsString(fixedJsonNode);
-        } catch (JsonProcessingException e) {
-            log.warn("not json data {}", lstRespStr);
+            String asrResult = jsonNode.get("text").asText();
+            R1IotUtils.JSON_RET.set(jsonNode);
+            Assistant assistant = aiDirect.getAssistants().get(deviceId);
+
+            String answer = assistant.chat(asrResult);
+
+            JsonNode fixedJsonNode = R1IotUtils.JSON_RET.get();
+            if (R1IotUtils.REPLACE_ANSWER.get() != null && R1IotUtils.REPLACE_ANSWER.get()) {
+                fixedJsonNode = R1IotUtils.sampleChatResp(answer);
+            }
+
+            String modifiedJson = lastLine;
+            try {
+                modifiedJson = objectMapper.writeValueAsString(fixedJsonNode);
+            } catch (JsonProcessingException e) {
+                log.warn("not json data {}", lstRespStr);
+            }
+            String newText = replaceLastLine(lstRespStr, modifiedJson);
+
+            // 将响应体转换为字节数组（UTF-8 编码）
+            byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
+
+            // 计算字节长度
+            int contentLength = responseBytes.length;
+            // 替换 Content-Length 字段
+            String newContentLength = "Content-Length: " + contentLength;
+            return newText.replaceAll("Content-Length: \\d+", newContentLength);
+
+        } catch (Exception e) {
+            log.warn("resp last {}", lstRespStr);
+            // some case, asr only return partial json snippet
+            return null;
+        } finally {
+            R1IotUtils.JSON_RET.remove();
         }
-        String newText = replaceLastLine(lstRespStr, modifiedJson);
 
-        // 将响应体转换为字节数组（UTF-8 编码）
-        byte[] responseBytes = modifiedJson.getBytes(StandardCharsets.UTF_8);
 
-        // 计算字节长度
-        int contentLength = responseBytes.length;
-        // 替换 Content-Length 字段
-        String newContentLength = "Content-Length: " + contentLength;
-        return newText.replaceAll("Content-Length: \\d+", newContentLength);
     }
 
-    private void overrideService(JsonNode jsonNode) {
-        String userInput = jsonNode.get("text").asText();
-        boolean needIot = false;
-        for (String each : CHAT2IOT) {
-            if (userInput.contains(each)) {
-                needIot = true;
-                break;
-            }
-        }
-        if (needIot) {
-            ((ObjectNode) jsonNode).put("service", "cn.yunzhisheng.setting");
-        }
-
-        boolean needMusic = false;
-        for (String each : CHAT2MUSIC) {
-            if (userInput.contains(each)) {
-                needMusic = true;
-                break;
-            }
-        }
-        if (needMusic) {
-            ((ObjectNode) jsonNode).put("service", "cn.yunzhisheng.music");
-        }
-    }
 
     private static String replaceLastLine(String text, String newLastLine) {
         int lastNewlineIndex = text.lastIndexOf("\n");

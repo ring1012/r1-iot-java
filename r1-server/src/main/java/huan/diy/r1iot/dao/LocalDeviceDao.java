@@ -1,10 +1,12 @@
 package huan.diy.r1iot.dao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -21,6 +23,9 @@ import java.util.stream.Collectors;
 @Component
 @Slf4j
 public class LocalDeviceDao {
+
+    @Autowired
+    private AIDirect aiDirect;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -46,13 +51,15 @@ public class LocalDeviceDao {
             System.out.println("Device config path already exists: " + path);
         }
 
-        refresh();
+        List<Device> devices = refreshAll();
+        devices.forEach(device -> aiDirect.upsertAssistant(device.getId()));
     }
 
-    private void refresh() {
+    private List<Device> refreshAll() {
         List<Device> devices = listAll();
         R1IotUtils.setDeviceMap(devices.stream()
                 .collect(Collectors.toMap(Device::getId, device -> device)));
+        return devices;
     }
 
 
@@ -101,7 +108,8 @@ public class LocalDeviceDao {
             log.error("Failed to write device to file", e);
             return 0; // 写入失败，返回失败
         } finally {
-            refresh();
+            refreshAll();
+            aiDirect.upsertAssistant(device.getId());
         }
 
     }

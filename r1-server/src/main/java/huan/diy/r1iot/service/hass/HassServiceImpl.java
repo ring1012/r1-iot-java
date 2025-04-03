@@ -1,4 +1,4 @@
-package huan.diy.r1iot.service.impl;
+package huan.diy.r1iot.service.hass;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +11,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.IotAiResp;
-import huan.diy.r1iot.service.IR1Service;
 import huan.diy.r1iot.service.ai.AiFactory;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
@@ -32,9 +31,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@Service("cn.yunzhisheng.setting")
+@Service
 @Slf4j
-public class IotServiceImpl implements IR1Service {
+public class HassServiceImpl {
 
     private static final Set<String> WHITE_LIST_PREFIX = Set.of("sensor", "automation", "switch", "light", "climate");
 
@@ -112,8 +111,7 @@ public class IotServiceImpl implements IR1Service {
         return filteredEntities;  // 返回过滤后的实体列表
     }
 
-    @Override
-    public JsonNode replaceOutPut(JsonNode input, String deviceId) {
+    public String replaceOutPut(JsonNode input, String deviceId) {
 
         String asrText = input.get("text").asText();
         IotAiResp aiIot;
@@ -123,7 +121,7 @@ public class IotServiceImpl implements IR1Service {
             throw new RuntimeException(e);
         }
 
-        String ttsContent = input.get("general").get("text").asText();
+        String ttsContent = "";
 
         String action = aiIot.getAction().trim().toLowerCase();
         switch (action) {
@@ -143,7 +141,7 @@ public class IotServiceImpl implements IR1Service {
 
         }
 
-        return R1IotUtils.sampleChatResp(ttsContent);
+        return ttsContent;
     }
 
     private void switchOperation(String deviceId, String entityId, boolean on) {
