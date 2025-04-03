@@ -35,7 +35,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 
     return (
 
-        <Form form={formInstance} initialValues={initValues} onFinish={handleSaveDevice} layout="vertical">
+        <Form form={formInstance} preserve  initialValues={initValues} onFinish={handleSaveDevice} layout="vertical">
             <Form.Item name="id" label="设备 ID" rules={[{required: true}]}>
                 <Input disabled className="form-input" placeholder={"劫持后，请喊一遍小讯小讯，重新刷新页面，自动填充"}/>
             </Form.Item>
@@ -43,7 +43,7 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
                 <Input className="form-input"/>
             </Form.Item>
 
-            <Collapse defaultActiveKey={['1']} className="form-input">
+            <Collapse defaultActiveKey={['1']} className="form-input" destroyInactivePanel={false}>
                 <Panel header="AI 配置" key="1">
                     <Form.Item name={["aiConfig", "choice"]} label="AI 选择">
                         <Select className="form-input">
