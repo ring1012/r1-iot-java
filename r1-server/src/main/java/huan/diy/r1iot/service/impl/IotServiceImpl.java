@@ -130,6 +130,7 @@ public class IotServiceImpl implements IR1Service {
             case "on":
                 switchOperation(deviceId, aiIot.getEntityId(), true);
                 break;
+
             case "off":
                 switchOperation(deviceId, aiIot.getEntityId(), false);
                 break;
@@ -147,9 +148,21 @@ public class IotServiceImpl implements IR1Service {
 
     private void switchOperation(String deviceId, String entityId, boolean on) {
         new Thread(() -> {
-            String operation = on ? "turn_on" : "turn_off";
+
+            if (entityId.startsWith("light")) {
+                JsonNode resp = stateQuery(deviceId, entityId);
+                String val = resp.get("state").textValue();
+                if (val.equals("on") && on) {
+                    return;
+                }
+                if (val.equals("off") && !on) {
+                    return;
+                }
+            }
             String url = R1IotUtils.getDeviceMap().get(deviceId).getHassConfig().getEndpoint();
-            url = url.endsWith("/") ? url : (url + "/") + "api/services/switch/" + operation;
+            url = url.endsWith("/") ? url : (url + "/");
+            url = buildOperationUrl(entityId, url, on);
+
             Map<String, String> entityMap = Map.of("entity_id", entityId);
 
             HttpHeaders headers = new HttpHeaders();
@@ -166,7 +179,23 @@ public class IotServiceImpl implements IR1Service {
         }).start();
     }
 
+    private String buildOperationUrl(String entityId, String url, boolean on) {
+        if (entityId.startsWith("switch")) {
+            return url + "api/services/switch/" + (on ? "turn_on" : "turn_off");
+        } else if (entityId.startsWith("light")) {
+            return url + "api/services/light/toggle";
+        }
+        return null;
+    }
+
     private String queryStatus(String deviceId, String entityId) {
+        JsonNode resp = stateQuery(deviceId, entityId);
+        String name = resp.get("attributes").get("friendly_name").textValue();
+        String val = resp.get("state").textValue();
+        return name + "是" + val;
+    }
+
+    private JsonNode stateQuery(String deviceId, String entityId) {
         String url = R1IotUtils.getDeviceMap().get(deviceId).getHassConfig().getEndpoint();
         url = url.endsWith("/") ? url : (url + "/") + "api/states/" + entityId;
         Device device = R1IotUtils.getDeviceMap().get(deviceId);
@@ -184,10 +213,7 @@ public class IotServiceImpl implements IR1Service {
                 entity,
                 JsonNode.class
         );
-        JsonNode resp = response.getBody();
-        String name = resp.get("attributes").get("friendly_name").textValue();
-        String val = resp.get("state").textValue();
-        return name + "是" + val;
+        return response.getBody();
     }
 
 }
