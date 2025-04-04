@@ -86,7 +86,7 @@ public class AsrServerHandler {
 
         try {
             String asrResult = prefix + jsonNode.get("asr_recongize").asText();
-            ((ObjectNode)jsonNode).put("text", asrResult);
+            ((ObjectNode) jsonNode).put("text", asrResult);
             R1IotUtils.JSON_RET.set(jsonNode);
             Assistant assistant = aiDirect.getAssistants().get(deviceId);
 
@@ -116,6 +116,7 @@ public class AsrServerHandler {
 
         } catch (Exception e) {
             log.warn("resp last {}", lstRespStr);
+            log.error("error: ", e);
             // some case, asr only return partial json snippet
             return null;
         } finally {
