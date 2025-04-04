@@ -56,11 +56,21 @@ public class BoxDecision {
     private Map<String, IAudioService> audioServiceMap;
     private HassServiceImpl iotService;
 
+    private boolean asked() {
+        if (R1IotUtils.ONLY_ONCE.get() == Boolean.TRUE) {
+            return true;
+        }
+        R1IotUtils.ONLY_ONCE.set(true);
+        return false;
+    }
 
     @Tool("""
-            用于回答用户的一般提问
+            用于回答用户的一切问题
             """)
     String questionAnswer(@P("用户输入") String userInput) {
+        if (asked()) {
+            return "SUCCESS";
+        }
         log.info("questionAnswer: {}", userInput);
         R1IotUtils.REPLACE_ANSWER.set(true);
         return userInput;
@@ -72,6 +82,10 @@ public class BoxDecision {
     void playMusic(@P(value = "歌曲作者，可以为空字符串", required = false) String author,
                    @P(value = "歌曲名称，可以为空字符串", required = false) String songName,
                    @P(value = "歌曲搜索关键词，可以为空字符串", required = false) String keyword) {
+        if (asked()) {
+            return;
+        }
+        log.info("author: {}, songName: {}, keyword: {}", author, songName, keyword);
         JsonNode musicResp = musicServiceMap.get(device.getMusicConfig().getChoice()).fetchMusics(new MusicAiResp(author, songName, keyword), device);
         JsonNode jsonNode = R1IotUtils.JSON_RET.get();
         ObjectNode ret = ((ObjectNode) jsonNode);
@@ -84,6 +98,8 @@ public class BoxDecision {
         general.put("text", "好的，已为您播放");
         general.put("type", "T");
         ret.set("general", general);
+        ret.put("service", "cn.yunzhisheng.music");
+
 
         ret.remove("taskName");
         R1IotUtils.JSON_RET.set(ret);
@@ -93,6 +109,9 @@ public class BoxDecision {
             音箱一般设置：氛围灯，音量，停止，休眠等等
             """)
     void voiceBoxSetting(@P("用户输入") String userInput) {
+        if (asked()) {
+            return;
+        }
         log.info("Called voiceBoxSetting with userInput={}", userInput);
     }
 
@@ -100,6 +119,9 @@ public class BoxDecision {
             智能家居控制，比如打开灯、热得快，空调，调节温度，查询湿度，等等
             """)
     String homeassistant(String actionCommand) {
+        if (asked()) {
+            return "SUCCESS";
+        }
         log.info("Called homeassistant with  actionCommand={}", actionCommand);
 
         R1IotUtils.REPLACE_ANSWER.set(true);
@@ -118,6 +140,9 @@ public class BoxDecision {
             用于播放新闻，比如体育、财经、科技、娱乐等等
             """)
     void playNews(@P("用户输入") String userInput) {
+        if (asked()) {
+            return;
+        }
         log.info("Called playNews with userInput={}", userInput);
     }
 
@@ -125,6 +150,9 @@ public class BoxDecision {
             用于播放故事、广播等
             """)
     void playAudio(@P("关键词") String keyword) {
+        if (asked()) {
+            return;
+        }
         log.info("Called playAudio with userInput={}", keyword);
     }
 

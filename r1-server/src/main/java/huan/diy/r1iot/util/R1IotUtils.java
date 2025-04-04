@@ -27,11 +27,13 @@ public class R1IotUtils {
 
     public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();
     public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
+    public ThreadLocal<Boolean> ONLY_ONCE = new ThreadLocal<>();
 
 
     public void remove(){
         JSON_RET.remove();
         REPLACE_ANSWER.remove();
+        ONLY_ONCE.remove();
     }
 
     public ObjectMapper objectMapper = new ObjectMapper();

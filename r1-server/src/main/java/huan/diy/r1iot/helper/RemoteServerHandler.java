@@ -12,6 +12,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 @Slf4j
@@ -28,6 +29,8 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
 
     private StringBuffer accumulatedData = new StringBuffer();
+    private StringBuffer asrText = new StringBuffer();
+    private AtomicBoolean handling = new AtomicBoolean(false);
 
     public synchronized void appendData(String data) {
         accumulatedData.append(data);
@@ -38,13 +41,16 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof ByteBuf) {
             ByteBuf responseData = (ByteBuf) msg;
             String data = responseData.toString(StandardCharsets.UTF_8);
-//                log.info("each data from remote server: {}", data);
+//            log.info("each data from remote server: {}", data);
 
             AsrResult asrResult = asrServerHandler.handle(data);
+//            log.info("asr result: {}", asrResult);
             Channel clientChannel = ctx.channel().attr(TcpChannelUtils.CLIENT_CHANNEL).get();
             if (clientChannel == null) {
                 return;
             }
+
+
             switch (asrResult.getType()) {
                 case DROPPED, SKIP:
                     clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
@@ -55,6 +61,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                         String[] lines = accumulatedData.toString().split("\n");
                         JsonNode node = objectMapper.readTree(lines[lines.length - 1]);
                         if (node.has("responseId")) {
+                            handling.compareAndSet(false, true);
                             break;
                         }
                         return;
@@ -62,12 +69,31 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                         return;
                     }
                 case END:
+                    handling.compareAndSet(false, true);
                     appendData(asrResult.getFixedData());
                     break;
+                case PREFIX:
+                    asrText.append(asrResult.getFixedData());
+                    clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
+                    return;
 
             }
-            log.info("from R1: {}", accumulatedData.toString());
-            String aiReply = asrServerHandler.enhance(accumulatedData.toString(),
+
+            if (!handling.get()) {
+                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
+                return;
+            }
+
+            if(clientChannel.attr(TcpChannelUtils.END).get() != Boolean.TRUE) {
+                asrText.append(asrResult.getFixedData());
+                accumulatedData.setLength(0);
+                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
+                return;
+            }
+
+            log.info("from R1: {} {}", asrText.toString(), accumulatedData.toString());
+
+            String aiReply = asrServerHandler.enhance(asrText.toString(), accumulatedData.toString(),
                     ctx.channel().attr(TcpChannelUtils.DEVICE_ID).get());
 
             log.info("from AI: {}", aiReply);
@@ -78,6 +104,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
             clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(aiReply.getBytes()));
             accumulatedData.setLength(0);  // 清空累积的数据
+
         }
     }
 

@@ -38,7 +38,11 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void forwardToRemoteServer(ChannelHandlerContext ctx, ByteBuf data) {
-//        log.info("from client: {}", data.toString(StandardCharsets.ISO_8859_1));
+        String body = data.toString(StandardCharsets.ISO_8859_1);
+        if (body.contains("TP:") && !body.contains("UI:")) {
+            ctx.channel().attr(TcpChannelUtils.END).set(true);
+        }
+//        log.info("from client: {}", body);
 //            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();
         String deviceId = setupCurrentDevice(data.toString(StandardCharsets.ISO_8859_1));
         ctx.channel().attr(TcpChannelUtils.DEVICE_ID).set(deviceId);
@@ -66,6 +70,7 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
                 ctx.close();
             }
         });
+
     }
 
     private String setupCurrentDevice(String r1Input) {

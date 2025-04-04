@@ -103,7 +103,7 @@ public class NetEaseMusicImpl implements IMusicService, IWebAlias {
         ObjectNode ret = objectMapper.createObjectNode();
         ret.put("count", idMap.size());
         ret.set("musicinfo", musicInfo);
-        ret.put("pagesize", "30");
+        ret.put("pagesize", String.valueOf(idMap.size()));
         ret.put("errorCode", 0);
         ret.put("page", "1");
         ret.put("source", 1);

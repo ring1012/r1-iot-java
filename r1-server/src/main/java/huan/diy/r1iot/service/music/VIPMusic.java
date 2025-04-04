@@ -63,7 +63,7 @@ public class VIPMusic implements IMusicService, IWebAlias {
         ObjectNode ret = objectMapper.createObjectNode();
         ret.put("count", arrayNode.size());
         ret.set("musicinfo", musicInfo);
-        ret.put("pagesize", "30");
+        ret.put("pagesize", String.valueOf(arrayNode.size()));
         ret.put("errorCode", 0);
         ret.put("page", "1");
         ret.put("source", 1);

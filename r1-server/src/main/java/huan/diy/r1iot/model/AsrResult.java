@@ -1,5 +1,8 @@
 package huan.diy.r1iot.model;
 
+import lombok.ToString;
+
+@ToString
 public class AsrResult {
     private AsrHandleType type;
     private String fixedData;

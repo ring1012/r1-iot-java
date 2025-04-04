@@ -102,7 +102,8 @@ public class AIDirect {
         return (context) -> systemPrompt + """
                 
                 注意：
-                不要翻译用户的输入！！
+                不要翻译用户的输入！
+                至少一定要选questionAnswer tool！
                 """;
     }
 

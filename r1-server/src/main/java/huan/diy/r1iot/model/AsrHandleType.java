@@ -14,6 +14,10 @@ public enum AsrHandleType {
      */
     APPEND,
     /**
+     * pre asr
+     */
+    PREFIX,
+    /**
      * reply to client
      */
     END;

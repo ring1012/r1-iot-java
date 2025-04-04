@@ -3,6 +3,7 @@ package huan.diy.r1iot.helper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.direct.Assistant;
 import huan.diy.r1iot.model.AsrHandleType;
@@ -48,6 +49,14 @@ public class AsrServerHandler {
             }
 
             // doesn't contain text
+            if (jsonNode.has("text")) {
+                return new AsrResult(AsrHandleType.END, jsonNode.get("asr_recongize").asText(), data);
+            }
+
+            if (jsonNode.has("asr_recongize")) {
+                return new AsrResult(AsrHandleType.PREFIX, jsonNode.get("asr_recongize").asText(), data);
+            }
+            // doesn't contain text
             if (!jsonNode.has("text")) {
                 return new AsrResult(AsrHandleType.SKIP, data, data);
             }
@@ -62,7 +71,7 @@ public class AsrServerHandler {
     }
 
 
-    public String enhance(String lstRespStr, String deviceId) {
+    public String enhance(String prefix, String lstRespStr, String deviceId) {
         JsonNode jsonNode;
         String lastLine;
         try {
@@ -76,7 +85,8 @@ public class AsrServerHandler {
         }
 
         try {
-            String asrResult = jsonNode.get("text").asText();
+            String asrResult = prefix + jsonNode.get("asr_recongize").asText();
+            ((ObjectNode)jsonNode).put("text", asrResult);
             R1IotUtils.JSON_RET.set(jsonNode);
             Assistant assistant = aiDirect.getAssistants().get(deviceId);
 
