@@ -151,7 +151,7 @@ public class BoxDecision {
     }
 
     @Tool("""
-            用于播放故事、广播、有声读物等
+            用于播放故事、视频、有声读物等
             """)
     void playAudio(@P("关键词") String keyword) {
         if (asked()) {

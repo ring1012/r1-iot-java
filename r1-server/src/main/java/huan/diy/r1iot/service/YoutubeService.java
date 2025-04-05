@@ -35,10 +35,17 @@ public class YoutubeService {
     private static final String LOCAL_IP;
 
     static {
+        String localIp1;
         try {
-            LOCAL_IP = InetAddress.getLocalHost().getHostAddress();
+            localIp1 = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
+            localIp1 = System.getenv("LOCAL_IP");
+        }
+
+        if (!localIp1.startsWith("http")) {
+            LOCAL_IP = "http://" + localIp1;
+        } else {
+            LOCAL_IP = localIp1;
         }
     }
 
@@ -114,7 +121,8 @@ public class YoutubeService {
                             .path("text")
                             .asText());
 
-                    music.put("url", "http://" + LOCAL_IP + ":8080/audio/play/" + id + ".m4a");
+
+                    music.put("url", LOCAL_IP + "/audio/play/" + id + ".m4a");
 
                     musicInfo.add(music);
                 });

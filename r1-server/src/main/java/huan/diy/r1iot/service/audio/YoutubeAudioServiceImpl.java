@@ -33,7 +33,7 @@ public class YoutubeAudioServiceImpl implements IAudioService {
             if (keyword.contains("有声")) {
                 end = "";
             }
-            return youtubeService.search(keyword, end);
+            return youtubeService.search(keyword, "");
         } catch (Exception e) {
             log.error("YoutubeAudioServiceImpl search error", e);
             return null;
