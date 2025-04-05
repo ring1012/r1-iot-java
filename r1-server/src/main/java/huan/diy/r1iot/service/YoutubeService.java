@@ -22,6 +22,12 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,18 +41,22 @@ public class YoutubeService {
     private static final String LOCAL_IP;
 
     static {
-        String localIp1;
-        try {
-            localIp1 = InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            localIp1 = System.getenv("LOCAL_IP");
-        }
+        String localIp1 = System.getenv("LOCAL_IP");
+        ;
 
         if (!localIp1.startsWith("http")) {
             LOCAL_IP = "http://" + localIp1;
         } else {
             LOCAL_IP = localIp1;
         }
+    }
+
+    private static String COOKIE_FILE;
+
+    static {
+        String homeDir = System.getProperty("user.home");
+        Path cookiePath = Paths.get(homeDir, ".r1-iot", "youtube.txt");
+        COOKIE_FILE = Files.exists(cookiePath) ? cookiePath.toAbsolutePath().toString() : null;
     }
 
 
@@ -168,25 +178,49 @@ public class YoutubeService {
     }
 
     private String fetchAudioUrlWithYtDlp(String videoId) throws IOException, InterruptedException {
-        // 构建 yt-dlp 命令
-        String[] command = {
-                "yt-dlp",
-                "-f", "140",  // 格式140通常是m4a音频
+
+        // 构建基础命令
+        List<String> command = new ArrayList<>();
+        command.add("yt-dlp");
+
+        // 添加Cookie（非Windows系统且Cookie文件存在时）
+        if (COOKIE_FILE != null) {
+            command.add("--cookies");
+            command.add(COOKIE_FILE);
+        }
+
+        // 添加其他参数
+        Collections.addAll(command,
+                "-f", "140",      // 音频格式
                 "--no-warnings",
-                "--get-url",
-                "-4",
-                videoId
-        };
+                "--get-url",      // 只获取URL不下载
+                "-4",            // 强制IPv4
+                videoId          // 视频ID或URL
+        );
 
-        Process process = Runtime.getRuntime().exec(command);
+        // 转换为数组执行
+        String[] cmdArray = command.toArray(new String[0]);
 
-        // 读取命令输出
+        Process process = Runtime.getRuntime().exec(cmdArray);
+
+
+        // 读取标准输出
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream()))) {
             String url = reader.readLine();
 
+            // 读取错误输出
+            try (BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(process.getErrorStream()))) {
+                String errorLine;
+                while ((errorLine = errorReader.readLine()) != null) {
+                    System.err.println("Error: " + errorLine);
+                }
+            }
+
             int exitCode = process.waitFor();
             if (exitCode != 0 || url == null || url.isEmpty()) {
+                System.err.println("Exit code: " + exitCode);
                 return null;
             }
 
