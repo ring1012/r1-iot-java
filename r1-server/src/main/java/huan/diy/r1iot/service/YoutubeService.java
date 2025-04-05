@@ -16,9 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -179,6 +177,11 @@ public class YoutubeService {
 
     private String fetchAudioUrlWithYtDlp(String videoId) throws IOException, InterruptedException {
 
+        String remoteYtDlp = System.getenv().get("YT_DLP");
+        if (remoteYtDlp != null) {
+            return fetchFromRemote(remoteYtDlp, videoId);
+        }
+
         // 构建基础命令
         List<String> command = new ArrayList<>();
         command.add("yt-dlp");
@@ -226,6 +229,20 @@ public class YoutubeService {
 
             return url;
         }
+    }
+
+    private String fetchFromRemote(String remoteYtDlp, String vId) {
+        StringBuilder sb = new StringBuilder();
+        if(!remoteYtDlp.startsWith("http")){
+            sb.append("http://");
+        }
+        sb.append(remoteYtDlp);
+        sb.append("/get_youtube_url?vId=");
+        sb.append(vId);
+
+
+        ResponseEntity<JsonNode> getResp = restTemplate.getForEntity(sb.toString(), JsonNode.class);
+        return getResp.getBody().get("url").asText();
     }
 
     // 代理请求方法保持不变

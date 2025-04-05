@@ -41,7 +41,7 @@ public class R1IotConfigure {
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000); // 连接超时
-        factory.setReadTimeout(5000);       // 读取超时
+        factory.setReadTimeout(30000);       // 读取超时
 
         RestTemplate restTemplate = new RestTemplate(factory);
 
