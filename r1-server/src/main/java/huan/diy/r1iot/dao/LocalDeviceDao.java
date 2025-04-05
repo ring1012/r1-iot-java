@@ -27,7 +27,8 @@ public class LocalDeviceDao {
     @Autowired
     private AIDirect aiDirect;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private final String DEVICE_CONFIG_PATH = Optional.ofNullable(System.getenv("DEVICE_CONFIG_PATH"))
             .orElse(System.getProperty("user.home") + "/.r1-iot");

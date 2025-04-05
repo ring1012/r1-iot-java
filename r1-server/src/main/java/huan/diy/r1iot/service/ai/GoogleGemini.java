@@ -24,8 +24,10 @@ public class GoogleGemini implements IAIService, IWebAlias {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private ObjectMapper objectMapper = new ObjectMapper();
+
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="; // 替换为实际的 API URL
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public JsonNode buildRequest(String userInput, List<Message> history, String systemPrompt) {

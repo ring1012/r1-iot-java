@@ -105,6 +105,9 @@ const Home: React.FC = () => {
             },
             musicConfig: {
                 choice: "NetEaseMusic"
+            },
+            audioConfig: {
+                choice: "Youtube"
             }
         };
         setDevices([...myDevices, newDevice]);

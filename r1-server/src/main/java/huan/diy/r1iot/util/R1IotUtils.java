@@ -36,6 +36,7 @@ public class R1IotUtils {
         ONLY_ONCE.remove();
     }
 
+    @Getter
     public ObjectMapper objectMapper = new ObjectMapper();
 
     public JsonNode sampleChatResp(String ttsContent) {

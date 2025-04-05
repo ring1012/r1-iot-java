@@ -1,4 +1,13 @@
 package huan.diy.r1iot.service.audio;
 
-public interface IAudioService {
+import com.fasterxml.jackson.databind.JsonNode;
+import huan.diy.r1iot.model.Device;
+import huan.diy.r1iot.service.IWebAlias;
+
+
+public interface IAudioService extends IWebAlias {
+
+    JsonNode search(String keyword, Device device);
+
+
 }

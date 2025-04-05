@@ -14,6 +14,7 @@ public class Device {
     private HASSConfig hassConfig;
     private NewsConfig newsConfig;
     private MusicConfig musicConfig;
+    private AudioConfig audioConfig;
 
     // Static inner class for AIConfig
     @Data
@@ -48,6 +49,15 @@ public class Device {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class MusicConfig {
+        private String choice;
+        private String endpoint;
+    }
+
+    // Static inner class for audio config
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class AudioConfig {
         private String choice;
         private String endpoint;
     }

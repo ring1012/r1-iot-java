@@ -26,7 +26,6 @@ import java.util.List;
 @Service("Grok")
 @Slf4j
 public class GrokAiX implements IAIService, IWebAlias {
-
     protected String BASE_URL;
     protected String MODEL;
 
@@ -35,14 +34,15 @@ public class GrokAiX implements IAIService, IWebAlias {
         this.MODEL = "grok-2-latest";
     }
 
+    @Autowired
+    private RestTemplate restTemplate;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);  // 全局忽略未知字段
     }
 
-    @Autowired
-    private RestTemplate restTemplate;
 
     @Override
     public JsonNode buildRequest(String userInput, List<Message> history, String systemPrompt) {

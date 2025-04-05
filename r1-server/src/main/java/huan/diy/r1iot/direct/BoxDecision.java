@@ -9,6 +9,7 @@ import dev.langchain4j.agent.tool.Tool;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
 import huan.diy.r1iot.service.audio.IAudioService;
+import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.util.R1IotUtils;
@@ -27,7 +28,7 @@ public class BoxDecision {
     private static final ObjectNode intent;
 
     static {
-        objectMapper = new ObjectMapper();
+        objectMapper = R1IotUtils.getObjectMapper();
         intent = objectMapper.createObjectNode();
 
         ObjectNode operationsObj = objectMapper.createObjectNode();
@@ -43,16 +44,19 @@ public class BoxDecision {
 
     public BoxDecision(Device device,
                        Map<String, IMusicService> musicServiceMap,
+                       Map<String, INewsService> newsServiceMap,
                        Map<String, IAudioService> audioServiceMap,
                        HassServiceImpl iotService) {
         this.device = device;
         this.musicServiceMap = musicServiceMap;
+        this.newsServiceMap = newsServiceMap;
         this.audioServiceMap = audioServiceMap;
         this.iotService = iotService;
     }
 
     private Device device;
     private Map<String, IMusicService> musicServiceMap;
+    private Map<String, INewsService> newsServiceMap;
     private Map<String, IAudioService> audioServiceMap;
     private HassServiceImpl iotService;
 
@@ -77,7 +81,7 @@ public class BoxDecision {
     }
 
     @Tool("""
-            用于处理播放音乐请求
+            用于处理播放音乐请求，比如流行歌曲，儿歌等等
             """)
     void playMusic(@P(value = "歌曲作者，可以为空字符串", required = false) String author,
                    @P(value = "歌曲名称，可以为空字符串", required = false) String songName,
@@ -147,13 +151,32 @@ public class BoxDecision {
     }
 
     @Tool("""
-            用于播放故事、广播等
+            用于播放故事、广播、有声读物等
             """)
     void playAudio(@P("关键词") String keyword) {
         if (asked()) {
             return;
         }
-        log.info("Called playAudio with userInput={}", keyword);
+
+        log.info("Called playAudio with keyword={}", keyword);
+        JsonNode musicResp = audioServiceMap.get(device.getAudioConfig().getChoice()).search(keyword, device);
+        JsonNode jsonNode = R1IotUtils.JSON_RET.get();
+        ObjectNode ret = ((ObjectNode) jsonNode);
+        ret.set("data", musicResp);
+        ret.set("semantic", intent);
+        ret.put("code", "SETTING_EXEC");
+        ret.put("matchType", "FUZZY");
+
+        ObjectNode general = objectMapper.createObjectNode();
+        general.put("text", "好的，已为您播放");
+        general.put("type", "T");
+        ret.set("general", general);
+        ret.put("service", "cn.yunzhisheng.music");
+
+
+        ret.remove("taskName");
+        R1IotUtils.JSON_RET.set(ret);
+
     }
 
 }

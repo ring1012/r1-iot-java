@@ -3,6 +3,7 @@ package huan.diy.r1iot.helper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.model.AsrResult;
+import huan.diy.r1iot.util.R1IotUtils;
 import huan.diy.r1iot.util.TcpChannelUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = R1IotUtils.getObjectMapper();
 
     private final AsrServerHandler asrServerHandler;
 

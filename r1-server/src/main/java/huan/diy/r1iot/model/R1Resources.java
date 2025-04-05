@@ -12,5 +12,6 @@ import java.util.List;
 public class R1Resources {
     private List<ServiceAliasName> aiList;
     private List<ServiceAliasName> musicList;
+    private List<ServiceAliasName> newsList;
     private List<ServiceAliasName> audioList;
 }

@@ -14,14 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Service("VIP")
 @Slf4j
 public class VIPMusic implements IMusicService, IWebAlias {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private RestTemplate restTemplate;

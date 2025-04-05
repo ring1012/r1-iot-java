@@ -1,9 +1,11 @@
 package huan.diy.r1iot.configure;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.model.R1Resources;
 import huan.diy.r1iot.service.IWebAlias;
 import huan.diy.r1iot.service.ai.IAIService;
 import huan.diy.r1iot.service.audio.IAudioService;
+import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.music.IMusicService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -21,11 +23,18 @@ public class R1IotConfigure {
     @Bean
     public R1Resources r1Resources(@Autowired List<IAIService> aiServices,
                                    @Autowired List<IMusicService> musicServices,
+                                   @Autowired List<INewsService> newsServices,
                                    @Autowired List<IAudioService> audioServices) {
         return new R1Resources(aiServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
                 musicServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
+                newsServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
                 audioServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList()
         );
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 
     @Bean

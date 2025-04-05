@@ -98,10 +98,20 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
                     </Row>
                 </Panel>
 
-                <Panel header="新闻配置" key="4" forceRender>
-                    <Form.Item name={["newsConfig", "choice"]} label="新闻源选择">
+                <Panel header="有声读物" key="4" forceRender>
+                    <Form.Item name={["audioConfig", "choice"]} label="音频源选择">
                         <Select className="form-input">
                             {r1Resources.audioList.map(item => {
+                                return <Option key={item.serviceName} value={item.serviceName}>{item.aliasName}</Option>
+                            })}
+                        </Select>
+                    </Form.Item>
+                </Panel>
+
+                <Panel header="新闻配置" key="5" forceRender>
+                    <Form.Item name={["newsConfig", "choice"]} label="新闻源选择">
+                        <Select className="form-input">
+                            {r1Resources.newsList.map(item => {
                                 return <Option key={item.serviceName} value={item.serviceName}>{item.aliasName}</Option>
                             })}
                         </Select>

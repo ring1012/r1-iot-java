@@ -9,6 +9,7 @@ import dev.langchain4j.service.AiServices;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.service.ai.IAIService;
 import huan.diy.r1iot.service.audio.IAudioService;
+import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.util.R1IotUtils;
@@ -28,6 +29,9 @@ public class AIDirect {
 
     @Autowired
     private Map<String, IAIService> aiServiceMap;
+
+    @Autowired
+    private Map<String, INewsService> newsServiceMap;
 
     @Autowired
     private Map<String, IAudioService> audioServiceMap;
@@ -70,7 +74,7 @@ public class AIDirect {
         }
 
         @Override
-        public void add( ChatMessage message) {
+        public void add(ChatMessage message) {
             List<ChatMessage> messages = messageCache.getIfPresent(key);
             if (messages == null) {
                 messages = new ArrayList<>();
@@ -92,8 +96,8 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, audioServiceMap, hassService))
-                .chatMemory(new GuavaChatMemory(deviceId, 8, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum())))
+                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, hassService))
+                .chatMemory(new GuavaChatMemory(deviceId, 5, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum())))
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build());
     }
@@ -102,8 +106,7 @@ public class AIDirect {
         return (context) -> systemPrompt + """
                 
                 注意：
-                不要翻译用户的输入！
-                至少一定要选questionAnswer tool！
+                你是一个中文的助手！
                 """;
     }
 

@@ -19,7 +19,10 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class AsrServerHandler {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private AIDirect aiDirect;
@@ -80,6 +83,7 @@ public class AsrServerHandler {
             jsonNode = objectMapper.readTree(lastLine);
         } catch (Exception e) {
             log.warn("resp last {}", lstRespStr);
+            log.error("error: ", e);
             // some case, asr only return partial json snippet
             return null;
         }

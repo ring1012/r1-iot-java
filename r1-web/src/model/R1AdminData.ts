@@ -15,17 +15,15 @@ export interface MusicConfig {
     endpoint?: string;
 }
 
-export interface NewsConfig {
-    choice: string;
-}
 
 export interface Device {
     id: string;
     name: string;
     aiConfig: AIConfig;
     hassConfig: HASSConfig;
-    newsConfig: NewsConfig;
+    newsConfig: MusicConfig;
     musicConfig: MusicConfig;
+    audioConfig: MusicConfig;
 }
 
 export interface ServiceAliasName {
@@ -36,6 +34,7 @@ export interface ServiceAliasName {
 export interface R1Resources {
     aiList: ServiceAliasName[];
     musicList: ServiceAliasName[];
+    newsList: ServiceAliasName[];
     audioList: ServiceAliasName[];
 }
 

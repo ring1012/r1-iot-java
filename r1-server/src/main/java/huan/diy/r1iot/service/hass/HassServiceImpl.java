@@ -45,6 +45,8 @@ public class HassServiceImpl {
     @Autowired
     private AiFactory aiFactory;
 
+    private static final ObjectMapper objectMapper = R1IotUtils.getObjectMapper();
+
     private static RestTemplate restTemplate;
 
     @PostConstruct
@@ -87,7 +89,6 @@ public class HassServiceImpl {
     }
 
     private static JsonNode filterEntities(JsonNode node) {
-        ObjectMapper objectMapper = new ObjectMapper();
         ArrayNode filteredEntities = objectMapper.createArrayNode();  // 创建一个数组节点，用来存储过滤后的实体
 
         for (JsonNode entity : node) {

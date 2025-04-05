@@ -20,7 +20,8 @@ import java.util.*;
 @Slf4j
 public class NetEaseMusicImpl implements IMusicService, IWebAlias {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private RestTemplate restTemplate;
