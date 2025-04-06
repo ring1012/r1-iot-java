@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
 import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.direct.Assistant;
 import huan.diy.r1iot.model.AsrHandleType;
@@ -14,11 +16,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Slf4j
 @Component
 public class AsrServerHandler {
-
 
 
     @Autowired
@@ -92,9 +94,20 @@ public class AsrServerHandler {
             String asrResult = prefix + jsonNode.get("asr_recongize").asText();
             ((ObjectNode) jsonNode).put("text", asrResult);
             R1IotUtils.JSON_RET.set(jsonNode);
-            Assistant assistant = aiDirect.getAssistants().get(deviceId);
+            Assistant assistant = aiDirect.getAssistants().get(deviceId).getAssistant();
 
             String answer = assistant.chat(asrResult);
+
+            if (R1IotUtils.ONLY_ONCE.get() != Boolean.TRUE) {
+                // no tools picked
+                // use last ai message
+                List<ChatMessage> messages = aiDirect.getAssistants().get(deviceId).getChatMemory().messages();
+                ChatMessage message = messages.get(messages.size() - 1);
+                if (message instanceof AiMessage) {
+                    R1IotUtils.REPLACE_ANSWER.set(true);
+                    answer = ((AiMessage) message).text();
+                }
+            }
 
             JsonNode fixedJsonNode = R1IotUtils.JSON_RET.get();
             if (R1IotUtils.REPLACE_ANSWER.get() != null && R1IotUtils.REPLACE_ANSWER.get()) {

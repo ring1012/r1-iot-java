@@ -13,7 +13,10 @@ import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.util.R1IotUtils;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -43,9 +46,17 @@ public class AIDirect {
     private HassServiceImpl hassService;
 
     @Getter
-    private Map<String, Assistant> assistants = new ConcurrentHashMap<>();
+    private Map<String, AssistantWithChat> assistants = new ConcurrentHashMap<>();
 
-    static class GuavaChatMemory implements ChatMemory {
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class AssistantWithChat{
+        private Assistant assistant;
+        private ChatMemory chatMemory;
+    }
+
+    public static class GuavaChatMemory implements ChatMemory {
         private final Cache<String, List<ChatMessage>> messageCache;
         private final int maxMessages;
         private final String key;
@@ -92,14 +103,15 @@ public class AIDirect {
         if (device.getAiConfig() == null) {
             return;
         }
+        ChatMemory chatMemory = new GuavaChatMemory(deviceId, 5, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum()));
         IAIService aiService = aiServiceMap.get(device.getAiConfig().getChoice());
         ChatLanguageModel model = aiService.buildModel(device);
-        assistants.put(deviceId, AiServices.builder(Assistant.class)
+        assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
                 .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService))
-                .chatMemory(new GuavaChatMemory(deviceId, 5, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum())))
+                .chatMemory(chatMemory)
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
-                .build());
+                .build(), chatMemory));
     }
 
     public static Function<Object, String> generateSystemPromptFunc(String systemPrompt) {

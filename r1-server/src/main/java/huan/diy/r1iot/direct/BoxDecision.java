@@ -69,19 +69,8 @@ public class BoxDecision {
     }
 
     @Tool("""
-            用于回答用户的一切问题
-            """)
-    String questionAnswer(@P("用户输入") String userInput) {
-        if (asked()) {
-            return "SUCCESS";
-        }
-        log.info("questionAnswer: {}", userInput);
-        R1IotUtils.REPLACE_ANSWER.set(true);
-        return userInput;
-    }
-
-    @Tool("""
-            用于处理播放音乐请求，比如流行歌曲，儿歌等等
+            用于处理播放音乐请求，比如流行歌曲，儿歌等等.
+            samples: 我想听刀郎的歌，播放夜曲
             """)
     void playMusic(@P(value = "歌曲作者，可以为空字符串", required = false) String author,
                    @P(value = "歌曲名称，可以为空字符串", required = false) String songName,
@@ -141,17 +130,39 @@ public class BoxDecision {
     }
 
     @Tool("""
-            用于播放新闻，比如体育、财经、科技、娱乐等等
+            用于播放新闻，比如体育、财经、科技、娱乐等等。
+            samples: 播放新闻
             """)
     void playNews(@P("用户输入") String userInput) {
         if (asked()) {
             return;
         }
+
+        INewsService newsService = newsServiceMap.getOrDefault(device.getNewsConfig().getChoice(), newsServiceMap.get("chinaSound"));
+        JsonNode musicResp = newsService.fetchNews(userInput, device);
+        JsonNode jsonNode = R1IotUtils.JSON_RET.get();
+        ObjectNode ret = ((ObjectNode) jsonNode);
+        ret.set("data", musicResp);
+        ret.set("semantic", intent);
+        ret.put("code", "SETTING_EXEC");
+        ret.put("matchType", "FUZZY");
+
+        ObjectNode general = objectMapper.createObjectNode();
+        general.put("text", "好的，已为您播放");
+        general.put("type", "T");
+        ret.set("general", general);
+        ret.put("service", "cn.yunzhisheng.music");
+
+
+        ret.remove("taskName");
+        R1IotUtils.JSON_RET.set(ret);
+
         log.info("Called playNews with userInput={}", userInput);
     }
 
     @Tool("""
-            用于播放故事、视频、有声读物等
+            用于播放故事、视频、有声读物等。
+            samples: 我想看三体，播放三体有声读物
             """)
     void playAudio(@P("关键词") String keyword) {
         if (asked()) {
