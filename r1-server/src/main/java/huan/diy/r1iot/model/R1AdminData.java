@@ -13,4 +13,5 @@ public class R1AdminData {
     private R1Resources r1Resources;
     private List<Device> devices;
     private String currentDeviceId;
+    private R1GlobalConfig r1GlobalConfig;
 }

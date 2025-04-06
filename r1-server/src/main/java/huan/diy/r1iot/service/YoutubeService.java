@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import huan.diy.r1iot.model.R1GlobalConfig;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,18 +37,9 @@ import java.util.stream.StreamSupport;
 @Slf4j
 public class YoutubeService {
 
-    private static final String LOCAL_IP;
 
-    static {
-        String localIp1 = System.getenv("LOCAL_IP");
-        ;
-
-        if (!localIp1.startsWith("http")) {
-            LOCAL_IP = "http://" + localIp1;
-        } else {
-            LOCAL_IP = localIp1;
-        }
-    }
+    @Autowired
+    private R1GlobalConfig r1GlobalConfig;
 
     private static String COOKIE_FILE;
 
@@ -130,7 +122,7 @@ public class YoutubeService {
                             .asText());
 
 
-                    music.put("url", LOCAL_IP + "/audio/play/" + id + ".m4a");
+                    music.put("url", r1GlobalConfig.getHostIp() + "/audio/play/" + id + ".m4a");
 
                     musicInfo.add(music);
                 });
@@ -177,8 +169,9 @@ public class YoutubeService {
 
     private String fetchAudioUrlWithYtDlp(String videoId) throws IOException, InterruptedException {
 
-        String remoteYtDlp = System.getenv().get("YT_DLP");
+        String remoteYtDlp = r1GlobalConfig.getYtdlpEndpoint();
         if (remoteYtDlp != null) {
+            // arm 运行 ytDlp太慢，找一台amd服务器转发一下。
             return fetchFromRemote(remoteYtDlp, videoId);
         }
 
@@ -233,7 +226,7 @@ public class YoutubeService {
 
     private String fetchFromRemote(String remoteYtDlp, String vId) {
         StringBuilder sb = new StringBuilder();
-        if(!remoteYtDlp.startsWith("http")){
+        if (!remoteYtDlp.startsWith("http")) {
             sb.append("http://");
         }
         sb.append(remoteYtDlp);

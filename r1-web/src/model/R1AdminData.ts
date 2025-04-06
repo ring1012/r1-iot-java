@@ -42,4 +42,11 @@ export interface R1AdminData {
     r1Resources: R1Resources;
     devices: Device[];
     currentDeviceId: string;
+    r1GlobalConfig: R1GlobalConfig;
+}
+
+export interface R1GlobalConfig {
+    hostIp: string;
+    ytdlpEndpoint: string;
+    cfServiceId: string;
 }

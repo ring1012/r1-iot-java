@@ -96,7 +96,7 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, hassService))
+                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService))
                 .chatMemory(new GuavaChatMemory(deviceId, 5, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum())))
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build());

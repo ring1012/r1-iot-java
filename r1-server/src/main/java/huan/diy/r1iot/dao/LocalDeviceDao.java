@@ -3,6 +3,7 @@ package huan.diy.r1iot.dao;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.model.Device;
+import huan.diy.r1iot.model.R1GlobalConfig;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static huan.diy.r1iot.util.R1IotUtils.DEVICE_CONFIG_PATH;
+
 @Component
 @Slf4j
 public class LocalDeviceDao {
@@ -30,8 +33,6 @@ public class LocalDeviceDao {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private final String DEVICE_CONFIG_PATH = Optional.ofNullable(System.getenv("DEVICE_CONFIG_PATH"))
-            .orElse(System.getProperty("user.home") + "/.r1-iot");
 
     @PostConstruct
     public void init() {
@@ -115,9 +116,41 @@ public class LocalDeviceDao {
 
     }
 
+    public int upInsertGlobalConfig(R1GlobalConfig config) {
+        enrichDeviceUrl(config);
+        // 获取文件路径，文件名就是 device.getId() + ".json"
+        File deviceFile = new File(DEVICE_CONFIG_PATH, "global.conf");
+
+        // 如果文件存在，先删除它
+        if (deviceFile.exists()) {
+            if (deviceFile.delete()) {
+                log.info("Deleted old device file: " + deviceFile.getName());
+            } else {
+                log.error("Failed to delete old device file: " + deviceFile.getName());
+                return 0; // 删除失败，返回失败
+            }
+        }
+
+        // 创建新文件并写入设备数据
+        try {
+            objectMapper.writeValue(deviceFile, config);
+            log.info("Inserted/Updated device into file: " + deviceFile.getName());
+            return 1; // 成功
+        } catch (IOException e) {
+            log.error("Failed to write device to file", e);
+            return 0; // 写入失败，返回失败
+        }
+
+    }
+
     private void enrichDeviceUrl(Device device) {
         Optional.ofNullable(device.getHassConfig()).ifPresent(a -> a.setEndpoint(httpSchema(a.getEndpoint())));
         Optional.ofNullable(device.getMusicConfig()).ifPresent(a -> a.setEndpoint(httpSchema(a.getEndpoint())));
+    }
+
+    private void enrichDeviceUrl(R1GlobalConfig config) {
+        Optional.ofNullable(config.getYtdlpEndpoint()).ifPresent(a -> config.setYtdlpEndpoint(httpSchema(a)));
+        Optional.ofNullable(config.getHostIp()).ifPresent(a -> config.setHostIp(httpSchema(a)));
     }
 
     private String httpSchema(String input) {

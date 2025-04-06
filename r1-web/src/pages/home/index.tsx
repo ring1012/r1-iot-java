@@ -11,7 +11,7 @@ import axiosInstance from "../../components/api";
 
 const {TabPane} = Tabs;
 
-const Home: React.FC = () => {
+const Box: React.FC = () => {
     const [r1AdminData, setR1AdminData] = useState<R1AdminData | null>(null);
     const [r1Resources, setR1Resources] = useState<R1Resources>();
     const [showPasswordModal, setShowPasswordModal] = useState(false); // 控制弹窗显示
@@ -158,30 +158,13 @@ const Home: React.FC = () => {
         }
     };
 
-    const handlePasswordSubmit = async (password: string) => {
-        try {
-            const response = await axiosInstance.post(`${apiURL}auth`, {password});
-            if (response.status === 200) {
-                window.localStorage.setItem("token", response.data);
 
-                // 刷新当前页面
-                window.location.reload();
-            }
-        } catch (err) {
-            console.error('验证失败:', err);
-            alert('密码错误，请重试！');
-
-            // 刷新当前页面
-            window.location.reload();
-        }
-    };
 
     return (
         <>
             {showPasswordModal && (
                 <PasswordModal
                     onClose={() => setShowPasswordModal(false)}
-                    onSubmit={handlePasswordSubmit}
                 />
             )}
 
@@ -235,4 +218,4 @@ const Home: React.FC = () => {
     );
 };
 
-export default Home;
+export default Box;

@@ -25,6 +25,8 @@ public class R1IotUtils {
     @Setter
     private Map<String, Device> deviceMap;
 
+    public static final String DEVICE_CONFIG_PATH = System.getProperty("user.home") + "/.r1-iot";
+
     public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();
     public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
     public ThreadLocal<Boolean> ONLY_ONCE = new ThreadLocal<>();
