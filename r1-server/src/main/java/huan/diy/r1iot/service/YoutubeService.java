@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.vdurmont.emoji.EmojiParser;
 import huan.diy.r1iot.model.R1GlobalConfig;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -108,18 +109,18 @@ public class YoutubeService {
                     String id = renderer.path("videoId").asText();
                     music.put("id", id);
                     // 视频标题
-                    music.put("title", renderer.path("title")
+                    music.put("title", EmojiParser.removeAllEmojis(renderer.path("title")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText());
+                            .asText()));
 
                     // 频道名称（优先从ownerText获取）
-                    music.put("artist", renderer.path("ownerText")
+                    music.put("artist", EmojiParser.removeAllEmojis(renderer.path("ownerText")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText());
+                            .asText()));
 
 
                     music.put("url", r1GlobalConfig.getHostIp() + "/audio/play/" + id + ".m4a");
