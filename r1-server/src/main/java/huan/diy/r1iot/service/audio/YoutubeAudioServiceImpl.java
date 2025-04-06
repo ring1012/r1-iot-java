@@ -27,13 +27,9 @@ public class YoutubeAudioServiceImpl implements IAudioService {
     }
 
     @Override
-    public JsonNode search(String keyword, Device device) {
+    public JsonNode search(String keyword, boolean look, Device device) {
         try {
-            String end = this.suffix;
-            if (keyword.contains("有声")) {
-                end = "";
-            }
-            return youtubeService.search(keyword, end);
+            return youtubeService.search(keyword, look ? "" : suffix);
         } catch (Exception e) {
             log.error("YoutubeAudioServiceImpl search error", e);
             return null;

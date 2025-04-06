@@ -164,13 +164,13 @@ public class BoxDecision {
             用于播放故事、视频、有声读物等。
             samples: 我想看三体，播放三体有声读物
             """)
-    void playAudio(@P("关键词") String keyword) {
+    void playAudio(@P("关键词") String keyword, @P(value = "动作，是否是看？", required = false) boolean look) {
         if (asked()) {
             return;
         }
 
         log.info("Called playAudio with keyword={}", keyword);
-        JsonNode musicResp = audioServiceMap.get(device.getAudioConfig().getChoice()).search(keyword, device);
+        JsonNode musicResp = audioServiceMap.get(device.getAudioConfig().getChoice()).search(keyword, look, device);
         JsonNode jsonNode = R1IotUtils.JSON_RET.get();
         ObjectNode ret = ((ObjectNode) jsonNode);
         ret.set("data", musicResp);

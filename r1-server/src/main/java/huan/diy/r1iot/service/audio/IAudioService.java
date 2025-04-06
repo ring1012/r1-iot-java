@@ -7,7 +7,7 @@ import huan.diy.r1iot.service.IWebAlias;
 
 public interface IAudioService extends IWebAlias {
 
-    JsonNode search(String keyword, Device device);
+    JsonNode search(String keyword, boolean look,  Device device);
 
 
 }

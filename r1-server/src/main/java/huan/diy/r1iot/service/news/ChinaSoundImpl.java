@@ -42,7 +42,7 @@ public class ChinaSoundImpl implements INewsService, IWebAlias {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("chanId", "64");  // 中国之声频道ID
         requestBody.put("pageIndex", 1);  // 第一页
-        requestBody.put("perPage", 20);   // 每页20条
+        requestBody.put("perPage", 40);   // 每页20条
         requestBody.put("lastNewsId", "0");
         requestBody.put("docPubTime", "");
 
