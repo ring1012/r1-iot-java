@@ -1,6 +1,7 @@
 package huan.diy.r1iot.configure;
 
 import huan.diy.r1iot.helper.AsrServerHandler;
+import huan.diy.r1iot.helper.KeepClientTCPAlive;
 import huan.diy.r1iot.helper.RemoteServerHandler;
 import huan.diy.r1iot.helper.TcpForwardHandler;
 import io.netty.bootstrap.Bootstrap;
@@ -26,6 +27,9 @@ public class TcpServerController {
     @Autowired
     private AsrServerHandler asrServerHandler;
 
+    @Autowired
+    private KeepClientTCPAlive keepClientTCPAlive;
+
 
     public void initTcp() {
         int port = 80;  // 服务器监听端口
@@ -40,7 +44,7 @@ public class TcpServerController {
                     @Override
                     protected void initChannel(SocketChannel ch) {
                         ch.pipeline().addLast(new IdleStateHandler(0, 0, 30, TimeUnit.SECONDS));
-                        ch.pipeline().addLast(new RemoteServerHandler(asrServerHandler));
+                        ch.pipeline().addLast(new RemoteServerHandler(asrServerHandler, keepClientTCPAlive));
                     }
                 });
 

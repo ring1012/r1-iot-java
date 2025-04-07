@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -25,8 +26,8 @@ import static huan.diy.r1iot.util.R1IotUtils.DEVICE_CONFIG_PATH;
 
 @Configuration
 @EnableAspectJAutoProxy
+@EnableAsync
 public class R1IotConfigure {
-
 
     @Bean
     public R1GlobalConfig r1GlobalConfig() {

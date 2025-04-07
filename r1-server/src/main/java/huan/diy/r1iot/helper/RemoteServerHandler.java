@@ -13,7 +13,9 @@ import io.netty.handler.timeout.IdleStateEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Slf4j
@@ -22,12 +24,16 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     private static final ObjectMapper objectMapper = R1IotUtils.getObjectMapper();
 
     private final AsrServerHandler asrServerHandler;
+    private final KeepClientTCPAlive keepClientTCPAlive;
 
-    public RemoteServerHandler(AsrServerHandler asrServerHandler) {
+    public RemoteServerHandler(AsrServerHandler asrServerHandler, KeepClientTCPAlive keepClientTCPAlive) {
         super();
         this.asrServerHandler = asrServerHandler;
+        this.keepClientTCPAlive = keepClientTCPAlive;
     }
 
+    private Future<?> taskFuture = null;
+    private AtomicInteger delayMs = new AtomicInteger(800);
 
     private StringBuffer accumulatedData = new StringBuffer();
     private StringBuffer asrText = new StringBuffer();
@@ -44,17 +50,22 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             String data = responseData.toString(StandardCharsets.UTF_8);
 //            log.info("each data from remote server: {}", data);
 
-            AsrResult asrResult = asrServerHandler.handle(data);
 //            log.info("asr result: {}", asrResult);
             Channel clientChannel = ctx.channel().attr(TcpChannelUtils.CLIENT_CHANNEL).get();
             if (clientChannel == null) {
                 return;
             }
 
+            if (!data.contains("PN: q") && taskFuture == null) {
+                // 创建任务
+                clientChannel.writeAndFlush(msg);
+                taskFuture = keepClientTCPAlive.startKeepAliveTask(data, clientChannel, delayMs);
+            }
+
+            AsrResult asrResult = asrServerHandler.handle(data);
 
             switch (asrResult.getType()) {
                 case DROPPED, SKIP:
-                    clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
                     return;
                 case APPEND:
                     appendData(asrResult.getFixedData());
@@ -75,27 +86,37 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                     break;
                 case PREFIX:
                     asrText.append(asrResult.getFixedData());
-                    clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
                     return;
 
             }
 
             if (!handling.get()) {
-                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
                 return;
             }
 
-            if(clientChannel.attr(TcpChannelUtils.END).get() != Boolean.TRUE) {
+            if (clientChannel.attr(TcpChannelUtils.END).get() != Boolean.TRUE) {
                 asrText.append(asrResult.getFixedData());
                 accumulatedData.setLength(0);
-                clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(data.getBytes()));
                 return;
             }
 
             log.info("from R1: {} {}", asrText.toString(), accumulatedData.toString());
 
+
             String aiReply = asrServerHandler.enhance(asrText.toString(), accumulatedData.toString(),
                     ctx.channel().attr(TcpChannelUtils.DEVICE_ID).get());
+
+            if (accumulatedData.toString().contains("PN: ry") && taskFuture != null) {
+                // 控制加速
+                delayMs.set(20);
+                log.info("speed up {}", delayMs.get());
+                try {
+                    taskFuture.get(); // 同步等待
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
 
             log.info("from AI: {}", aiReply);
             if (aiReply == null) {
@@ -108,6 +129,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
         }
     }
+
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
