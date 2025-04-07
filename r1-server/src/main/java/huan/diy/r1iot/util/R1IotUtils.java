@@ -25,6 +25,9 @@ public class R1IotUtils {
     @Setter
     private Map<String, Device> deviceMap;
 
+    public static final String CHINESE = "[^\u4e00-\u9fa5\uFF00-\uFFEF\u3000-\u303F"
+            + "\u0020-\u007E\u00A0-\u00FF\u2000-\u206F]";
+
     public static final String DEVICE_CONFIG_PATH = System.getProperty("user.home") + "/.r1-iot";
 
     public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();

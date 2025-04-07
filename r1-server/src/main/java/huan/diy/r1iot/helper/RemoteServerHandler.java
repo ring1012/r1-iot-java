@@ -16,6 +16,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Slf4j
@@ -33,11 +36,15 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private Future<?> taskFuture = null;
-    private AtomicInteger delayMs = new AtomicInteger(800);
+    private AtomicInteger delayMs = new AtomicInteger(900);
 
     private StringBuffer accumulatedData = new StringBuffer();
     private StringBuffer asrText = new StringBuffer();
     private AtomicBoolean handling = new AtomicBoolean(false);
+    private AtomicReference<String> stopRef = new AtomicReference<>("zz");
+
+    private static final Pattern pattern = Pattern.compile("PN:\\s*(\\S+)");
+
 
     public synchronized void appendData(String data) {
         accumulatedData.append(data);
@@ -59,7 +66,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             if (!data.contains("PN: q") && taskFuture == null) {
                 // 创建任务
                 clientChannel.writeAndFlush(msg);
-                taskFuture = keepClientTCPAlive.startKeepAliveTask(data, clientChannel, delayMs);
+                taskFuture = keepClientTCPAlive.startKeepAliveTask(data, clientChannel, delayMs, stopRef);
             }
 
             AsrResult asrResult = asrServerHandler.handle(data);
@@ -100,16 +107,24 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
-            log.info("from R1: {} {}", asrText.toString(), accumulatedData.toString());
+            String rawData = accumulatedData.toString();
+            log.info("from R1: {} {}", asrText.toString(), rawData);
 
 
-            String aiReply = asrServerHandler.enhance(asrText.toString(), accumulatedData.toString(),
+            String aiReply = asrServerHandler.enhance(asrText.toString(), rawData,
                     ctx.channel().attr(TcpChannelUtils.DEVICE_ID).get());
 
-            if (accumulatedData.toString().contains("PN: ry") && taskFuture != null) {
+            Matcher matcher = pattern.matcher(rawData);
+            String pnValue = null;
+            if (matcher.find()) {
+                 pnValue = matcher.group(1);
+            }
+
+            if (taskFuture != null) {
                 // 控制加速
-                delayMs.set(20);
-                log.info("speed up {}", delayMs.get());
+                stopRef.set(pnValue);
+                delayMs.set(1);
+//                log.info("speed up {}", delayMs.get());
                 try {
                     taskFuture.get(); // 同步等待
                 } catch (Exception e) {
@@ -118,11 +133,12 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             }
 
 
-            log.info("from AI: {}", aiReply);
             if (aiReply == null) {
                 clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(accumulatedData.toString().getBytes()));
                 return;
             }
+
+            log.info("from AI: {}", aiReply);
 
             clientChannel.writeAndFlush(ctx.alloc().buffer().writeBytes(aiReply.getBytes()));
             accumulatedData.setLength(0);  // 清空累积的数据

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.vdurmont.emoji.EmojiParser;
 import huan.diy.r1iot.model.R1GlobalConfig;
+import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +42,8 @@ public class YoutubeService {
     @Autowired
     private R1GlobalConfig r1GlobalConfig;
 
+
+
     private static String COOKIE_FILE;
 
     static {
@@ -68,7 +70,8 @@ public class YoutubeService {
 
         // Updated to use fromUriString instead of fromHttpUrl
         String url = UriComponentsBuilder.fromUriString("https://www.youtube.com/results")
-                .queryParam("search_query", searchQuery)
+                .queryParam("search_query", searchQuery).queryParam("persist_gl", "1")
+                .queryParam("gl", "HK")
                 .build()
                 .toUriString();
 
@@ -109,18 +112,18 @@ public class YoutubeService {
                     String id = renderer.path("videoId").asText();
                     music.put("id", id);
                     // 视频标题
-                    music.put("title", EmojiParser.removeAllEmojis(renderer.path("title")
+                    music.put("title", renderer.path("title")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText()));
+                            .asText().replaceAll(R1IotUtils.CHINESE, ""));
 
                     // 频道名称（优先从ownerText获取）
-                    music.put("artist", EmojiParser.removeAllEmojis(renderer.path("ownerText")
+                    music.put("artist",  renderer.path("ownerText")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText()));
+                            .asText().replaceAll(R1IotUtils.CHINESE, ""));
 
 
                     music.put("url", r1GlobalConfig.getHostIp() + "/audio/play/" + id + ".m4a");

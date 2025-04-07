@@ -1,16 +1,11 @@
 package huan.diy.r1iot.free;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import huan.diy.r1iot.service.YoutubeService;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
