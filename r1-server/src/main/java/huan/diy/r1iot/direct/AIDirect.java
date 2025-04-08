@@ -9,6 +9,7 @@ import dev.langchain4j.service.AiServices;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.service.ai.IAIService;
 import huan.diy.r1iot.service.audio.IAudioService;
+import huan.diy.r1iot.service.box.BoxControllerService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
@@ -44,6 +45,9 @@ public class AIDirect {
 
     @Autowired
     private HassServiceImpl hassService;
+
+    @Autowired
+    private BoxControllerService boxControllerService;
 
     @Getter
     private Map<String, AssistantWithChat> assistants = new ConcurrentHashMap<>();
@@ -108,7 +112,7 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService))
+                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService, boxControllerService))
                 .chatMemory(chatMemory)
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build(), chatMemory));

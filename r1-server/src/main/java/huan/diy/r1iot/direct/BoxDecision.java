@@ -9,12 +9,14 @@ import dev.langchain4j.agent.tool.Tool;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
 import huan.diy.r1iot.service.audio.IAudioService;
+import huan.diy.r1iot.service.box.BoxControllerService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.util.R1IotUtils;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 
@@ -46,12 +48,14 @@ public class BoxDecision {
                        Map<String, IMusicService> musicServiceMap,
                        Map<String, INewsService> newsServiceMap,
                        Map<String, IAudioService> audioServiceMap,
-                       HassServiceImpl iotService) {
+                       HassServiceImpl iotService,
+                       BoxControllerService boxControllerService) {
         this.device = device;
         this.musicServiceMap = musicServiceMap;
         this.newsServiceMap = newsServiceMap;
         this.audioServiceMap = audioServiceMap;
         this.iotService = iotService;
+        this.boxControllerService = boxControllerService;
     }
 
     private Device device;
@@ -59,6 +63,7 @@ public class BoxDecision {
     private Map<String, INewsService> newsServiceMap;
     private Map<String, IAudioService> audioServiceMap;
     private HassServiceImpl iotService;
+    private BoxControllerService boxControllerService;
 
     private boolean asked() {
         if (R1IotUtils.ONLY_ONCE.get() == Boolean.TRUE) {
@@ -99,13 +104,30 @@ public class BoxDecision {
     }
 
     @Tool("""
-            音箱一般设置：氛围灯，音量，停止，休眠等等
+            音箱一般设置：切换氛围灯，音量，停止，休眠等等
             """)
-    void voiceBoxSetting(@P("用户输入") String userInput) {
+    void voiceBoxSetting(@P(value = "控制对象：氛围灯(lamp)，快进(faster)，快退(slower)，跳到时间(jump)，输出英文", required = false) String target,
+                         @P(value = "执行动作, 比如打开(on)，关闭(off)，切换效果(change)，转成秒的时间(数值)，输出英文", required = false) String action) {
+        log.info("target: {}, action: {}", target, action);
         if (asked()) {
             return;
         }
-        log.info("Called voiceBoxSetting with userInput={}", userInput);
+        if (!StringUtils.hasLength(R1IotUtils.CLIENT_IP.get())) {
+            return;
+        }
+
+        if (!StringUtils.hasLength(target)) {
+            return;
+        }
+
+        boolean handled = boxControllerService.control(R1IotUtils.CLIENT_IP.get(), target, action);
+        if(!handled) {
+            return;
+        }
+
+        R1IotUtils.REPLACE_ANSWER.set(true);
+
+
     }
 
     @Tool("""

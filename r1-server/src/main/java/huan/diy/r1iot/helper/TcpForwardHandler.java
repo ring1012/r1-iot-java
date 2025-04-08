@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedList;
@@ -41,6 +42,13 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
         String body = data.toString(StandardCharsets.ISO_8859_1);
         if (body.contains("TP:") && !body.contains("UI:")) {
             ctx.channel().attr(TcpChannelUtils.END).set(true);
+        }
+
+        SocketAddress socketAddress = ctx.channel().remoteAddress();
+        if (socketAddress instanceof InetSocketAddress) {
+            InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
+            String clientIp = inetSocketAddress.getAddress().getHostAddress();
+            ctx.channel().attr(TcpChannelUtils.CLIENT_IP).set(clientIp);
         }
 //        log.info("from client: {}", body);
 //            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();

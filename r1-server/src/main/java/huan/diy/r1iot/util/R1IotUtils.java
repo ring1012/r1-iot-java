@@ -33,12 +33,14 @@ public class R1IotUtils {
     public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();
     public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
     public ThreadLocal<Boolean> ONLY_ONCE = new ThreadLocal<>();
+    public ThreadLocal<String> CLIENT_IP = new ThreadLocal<>();
 
 
     public void remove(){
         JSON_RET.remove();
         REPLACE_ANSWER.remove();
         ONLY_ONCE.remove();
+        CLIENT_IP.remove();
     }
 
     @Getter

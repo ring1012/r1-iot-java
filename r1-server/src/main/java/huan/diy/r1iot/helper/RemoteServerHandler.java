@@ -36,7 +36,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private Future<?> taskFuture = null;
-    private AtomicInteger delayMs = new AtomicInteger(900);
+    private AtomicInteger delayMs = new AtomicInteger(960);
 
     private StringBuffer accumulatedData = new StringBuffer();
     private StringBuffer asrText = new StringBuffer();
@@ -110,6 +110,10 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             String rawData = accumulatedData.toString();
             log.info("from R1: {} {}", asrText.toString(), rawData);
 
+            String clientIp = clientChannel.attr(TcpChannelUtils.CLIENT_IP).get();
+            if (clientIp != null) {
+                R1IotUtils.CLIENT_IP.set(clientIp);
+            }
 
             String aiReply = asrServerHandler.enhance(asrText.toString(), rawData,
                     ctx.channel().attr(TcpChannelUtils.DEVICE_ID).get());
@@ -117,7 +121,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             Matcher matcher = pattern.matcher(rawData);
             String pnValue = null;
             if (matcher.find()) {
-                 pnValue = matcher.group(1);
+                pnValue = matcher.group(1);
             }
 
             if (taskFuture != null) {
