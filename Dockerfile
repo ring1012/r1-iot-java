@@ -61,5 +61,6 @@ RUN ARCH=$(uname -m) && \
 COPY --from=builder /workspace/r1-server/target/*.jar app.jar
 
 COPY r1-server/src/main/resources/scripts/manage_cloudflared.sh /manage_cloudflared.sh
+RUN chmod +x /manage_cloudflared.sh
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
