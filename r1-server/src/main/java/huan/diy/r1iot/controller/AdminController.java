@@ -7,9 +7,11 @@ import huan.diy.r1iot.model.R1Resources;
 import huan.diy.r1iot.service.DeviceService;
 import huan.diy.r1iot.util.R1IotUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @RestController
@@ -46,6 +48,10 @@ public class AdminController {
 
     @PostMapping("/globalConfig")
     public String deviceOne(@RequestBody final R1GlobalConfig req) {
+        if (Optional.ofNullable(req.getCfServiceId()).map(a ->
+                StringUtils.hasLength(a) && !a.equals(r1GlobalConfig.getCfServiceId())).orElse(false)) {
+            new Thread(() -> R1IotUtils.cfInstall(req.getCfServiceId())).start();
+        }
         r1GlobalConfig.setCfServiceId(req.getCfServiceId());
         r1GlobalConfig.setYtdlpEndpoint(req.getYtdlpEndpoint());
         r1GlobalConfig.setHostIp(req.getHostIp());

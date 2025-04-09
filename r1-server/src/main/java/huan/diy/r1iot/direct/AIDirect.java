@@ -67,7 +67,7 @@ public class AIDirect {
 
         public GuavaChatMemory(String key, long duration, TimeUnit unit, int maxMessages) {
             this.messageCache = CacheBuilder.newBuilder()
-                    .expireAfterWrite(duration, unit) // 8 分钟后自动过期
+                    .expireAfterWrite(duration, unit)
                     .build();
             this.maxMessages = maxMessages;
             this.key = key;
@@ -107,7 +107,7 @@ public class AIDirect {
         if (device.getAiConfig() == null) {
             return;
         }
-        ChatMemory chatMemory = new GuavaChatMemory(deviceId, 5, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum()));
+        ChatMemory chatMemory = new GuavaChatMemory(deviceId, 2, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum()));
         IAIService aiService = aiServiceMap.get(device.getAiConfig().getChoice());
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)

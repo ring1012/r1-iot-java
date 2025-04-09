@@ -11,8 +11,7 @@ import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -67,15 +66,23 @@ public class YoutubeService {
 
     public ObjectNode search(String keyword, String suffix) throws Exception {
         String searchQuery = (keyword + " " + suffix).trim();
+        // add header
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("accept-language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7");
+        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
 
         // Updated to use fromUriString instead of fromHttpUrl
         String url = UriComponentsBuilder.fromUriString("https://www.youtube.com/results")
-                .queryParam("search_query", searchQuery).queryParam("persist_gl", "1")
-                .queryParam("gl", "HK")
+                .queryParam("search_query", searchQuery)
                 .build()
                 .toUriString();
 
-        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                requestEntity,
+                String.class
+        );
         String html = response.getBody();
 
         // 从HTML中提取JSON数据

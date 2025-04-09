@@ -31,29 +31,35 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 根据系统架构下载对应的 yt-dlp 二进制
+# 根据系统架构下载对应的 yt-dlp 和 cloudflared 二进制
 RUN ARCH=$(uname -m) && \
     echo "检测到系统架构: $ARCH" && \
-    case "$ARCH" in \
-        "x86_64") \
-            URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux" \
-            ;; \
-        "armv7l"|"armhf") \
-            URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l" \
-            ;; \
-        "aarch64"|"arm64") \
-            URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64" \
-            ;; \
-        *) \
-            echo "不支持的架构: $ARCH"; exit 1 \
-            ;; \
-    esac && \
-    echo "下载URL: $URL" && \
-    wget "$URL" -O /usr/local/bin/yt-dlp && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        # yt-dlp
+        YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"; \
+        # cloudflared
+        CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"; \
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64"; \
+        CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb"; \
+    else \
+        echo "不支持的架构: $ARCH"; exit 1; \
+    fi && \
+    # 下载并安装 yt-dlp
+    echo "下载 yt-dlp URL: $YT_URL" && \
+    wget "$YT_URL" -O /usr/local/bin/yt-dlp && \
     chmod a+rx /usr/local/bin/yt-dlp && \
-    yt-dlp --version
+    yt-dlp --version && \
+    # 下载并安装 cloudflared
+    echo "下载 cloudflared URL: $CF_URL" && \
+    wget "$CF_URL" -O /tmp/cloudflared.deb && \
+    dpkg -i /tmp/cloudflared.deb || apt-get install -f -y && \
+    rm -f /tmp/cloudflared.deb && \
+    cloudflared --version
 
 # 从构建阶段复制 jar 文件
 COPY --from=builder /workspace/r1-server/target/*.jar app.jar
+
+COPY r1-server/src/main/resources/scripts/manage_cloudflared.sh /manage_cloudflared.sh
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

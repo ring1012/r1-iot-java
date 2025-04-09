@@ -187,7 +187,7 @@ public class BoxControllerService {
             return ret.toString();
         }
 
-        int onArg = "on".equalsIgnoreCase(action) ? 1 : 0;
+        int onArg = "off".equalsIgnoreCase(action) ? 0 : 1;
 
         ObjectNode ret = objectMapper.createObjectNode();
         ret.put("what", 4);
@@ -197,7 +197,7 @@ public class BoxControllerService {
         return ret.toString();
     }
 
-    // {position: "65906", type: "set_position"}
+
 
     // 修改后的WebSocketClientHandler，支持响应回调
     private static class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {

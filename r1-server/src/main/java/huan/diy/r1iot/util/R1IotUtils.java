@@ -7,10 +7,15 @@ import huan.diy.r1iot.model.Device;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Map;
 
 @UtilityClass
+@Slf4j
 public class R1IotUtils {
 
     @Setter
@@ -36,7 +41,7 @@ public class R1IotUtils {
     public ThreadLocal<String> CLIENT_IP = new ThreadLocal<>();
 
 
-    public void remove(){
+    public void remove() {
         JSON_RET.remove();
         REPLACE_ANSWER.remove();
         ONLY_ONCE.remove();
@@ -76,6 +81,40 @@ public class R1IotUtils {
     }
 
 
+    public void cfInstall(String serviceId) {
+        String scriptPath = "/manage_cloudflared.sh"; // 脚本路径
+
+        try {
+            // 执行命令
+            ProcessBuilder processBuilder = new ProcessBuilder(scriptPath, serviceId);
+            processBuilder.redirectErrorStream(true); // 合并标准错误和标准输出
+            Process process = processBuilder.start();
+
+
+            // 读取命令输出
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info(line);
+            }
+
+            // 读取错误输出
+            BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+            while ((line = errorReader.readLine()) != null) {
+                log.error(line);
+            }
+
+            // 等待命令执行完成
+            int exitCode = process.waitFor();
+            if (exitCode == 0) {
+                log.info("Cloudflared service installed successfully!");
+            } else {
+                log.error("Failed to install cloudflared service. Exit code: " + exitCode);
+            }
+        } catch (IOException | InterruptedException e) {
+            log.error("Error executing command: " + e.getMessage(), e);
+        }
+    }
 
 
 }

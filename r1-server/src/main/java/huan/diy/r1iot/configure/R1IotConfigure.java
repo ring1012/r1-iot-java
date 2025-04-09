@@ -1,6 +1,7 @@
 package huan.diy.r1iot.configure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.model.R1GlobalConfig;
 import huan.diy.r1iot.model.R1Resources;
 import huan.diy.r1iot.service.IWebAlias;
@@ -8,12 +9,14 @@ import huan.diy.r1iot.service.ai.IAIService;
 import huan.diy.r1iot.service.audio.IAudioService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.music.IMusicService;
+import huan.diy.r1iot.util.R1IotUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -35,7 +38,13 @@ public class R1IotConfigure {
         if (Files.exists(path)) {
             try {
                 String content = Files.readString(path);
-                return new ObjectMapper().readValue(content, R1GlobalConfig.class);
+                R1GlobalConfig ret = new ObjectMapper().readValue(content, R1GlobalConfig.class);
+                if (StringUtils.hasLength(ret.getCfServiceId())) {
+                    new Thread(() -> R1IotUtils.cfInstall(ret.getCfServiceId())).start();
+                }
+
+                return ret;
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
