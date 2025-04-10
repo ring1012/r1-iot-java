@@ -13,12 +13,14 @@ import huan.diy.r1iot.service.box.BoxControllerService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
+import huan.diy.r1iot.service.radio.IRadioService;
 import huan.diy.r1iot.util.R1IotUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -48,6 +50,10 @@ public class AIDirect {
 
     @Autowired
     private BoxControllerService boxControllerService;
+
+    @Autowired
+    @Qualifier("defaultRadio")
+    private IRadioService radioService;
 
     @Getter
     private Map<String, AssistantWithChat> assistants = new ConcurrentHashMap<>();
@@ -112,7 +118,7 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService, boxControllerService))
+                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService, boxControllerService, radioService))
                 .chatMemory(chatMemory)
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build(), chatMemory));

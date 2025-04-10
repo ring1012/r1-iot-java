@@ -13,6 +13,7 @@ import huan.diy.r1iot.service.box.BoxControllerService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
+import huan.diy.r1iot.service.radio.IRadioService;
 import huan.diy.r1iot.util.R1IotUtils;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -49,13 +50,15 @@ public class BoxDecision {
                        Map<String, INewsService> newsServiceMap,
                        Map<String, IAudioService> audioServiceMap,
                        HassServiceImpl iotService,
-                       BoxControllerService boxControllerService) {
+                       BoxControllerService boxControllerService,
+                       IRadioService radioService) {
         this.device = device;
         this.musicServiceMap = musicServiceMap;
         this.newsServiceMap = newsServiceMap;
         this.audioServiceMap = audioServiceMap;
         this.iotService = iotService;
         this.boxControllerService = boxControllerService;
+        this.radioService = radioService;
     }
 
     private Device device;
@@ -64,6 +67,7 @@ public class BoxDecision {
     private Map<String, IAudioService> audioServiceMap;
     private HassServiceImpl iotService;
     private BoxControllerService boxControllerService;
+    private IRadioService radioService;
 
     private boolean asked() {
         if (R1IotUtils.ONLY_ONCE.get() == Boolean.TRUE) {
@@ -121,7 +125,7 @@ public class BoxDecision {
         }
 
         boolean handled = boxControllerService.control(R1IotUtils.CLIENT_IP.get(), target, action);
-        if(!handled) {
+        if (!handled) {
             return;
         }
 
@@ -209,6 +213,26 @@ public class BoxDecision {
 
         ret.remove("taskName");
         R1IotUtils.JSON_RET.set(ret);
+
+    }
+
+
+    @Tool("""
+            用于播放广播
+            samples: 我想听上海交通广播
+            """)
+    void playRadio(@P("广播名称") String radioName, @P(value = "省份", required = false) String province) {
+        if (asked()) {
+        }
+
+
+        log.info("Called playAudio with radioName={}, province={}", radioName, province == null ? "" : province);
+
+        JsonNode ret = radioService.fetchRadio(radioName, province, device);
+
+
+        R1IotUtils.JSON_RET.set(ret);
+
 
     }
 

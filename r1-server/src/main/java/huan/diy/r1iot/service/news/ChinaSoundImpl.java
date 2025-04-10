@@ -69,11 +69,15 @@ public class ChinaSoundImpl implements INewsService, IWebAlias {
         int index = 0;
         for (JsonNode node : arrayNode) {
             try {
+                String link = node.get("other_info9").asText();
+                if (link.contains("m3u8")) {
+                    continue;
+                }
                 ObjectNode music = objectMapper.createObjectNode();
                 music.put("id", index++);
                 music.put("title", "新闻");
                 music.put("artist", "中国之声");
-                music.put("url", node.get("other_info9").asText());
+                music.put("url", link);
                 musicInfo.add(music);
             } catch (Exception e) {
                 log.error(e.getMessage(), e);

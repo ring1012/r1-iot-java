@@ -1,8 +1,10 @@
 package huan.diy.r1iot.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.langchain4j.internal.Json;
 import huan.diy.r1iot.model.Device;
 import lombok.Getter;
 import lombok.Setter;
@@ -113,6 +115,15 @@ public class R1IotUtils {
             }
         } catch (IOException | InterruptedException e) {
             log.error("Error executing command: " + e.getMessage(), e);
+        }
+    }
+
+    public JsonNode streamRespSample(String link) {
+        String sample = "{\"code\":\"ANSWER\",\"matchType\":\"NOT_UNDERSTAND\",\"originIntent\":{\"nluSlotInfos\":[]},\"confidence\":0.088038474,\"modelIntentClsScore\":{},\"history\":\"cn.yunzhisheng.chat\",\"source\":\"krc\",\"uniCarRet\":{\"result\":{},\"returnCode\":609,\"message\":\"http post reuqest error\"},\"asr_recongize\":\"地球半径。\",\"rc\":0,\"general\":{\"style\":\"translation\",\"audio\":\"" + link + "\",\"mood\":\"中性\",\"text\":\"半径。一根香蕉？\"},\"returnCode\":0,\"audioUrl\":\"http://asrv3.hivoice.cn/trafficRouter/r/0bXs9E\",\"retTag\":\"nlu\",\"service\":\"cn.yunzhisheng.chat\",\"nluProcessTime\":\"648\",\"text\":\"地球半径\",\"responseId\":\"2df6b92677d34cef8ba7b05d68c61896\"}";
+        try {
+            return objectMapper.readTree(sample);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
