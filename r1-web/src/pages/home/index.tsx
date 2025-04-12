@@ -108,6 +108,12 @@ const Box: React.FC = () => {
             },
             audioConfig: {
                 choice: "Youtube"
+            },
+            weatherConfig: {
+                choice: "QWeatherService",
+                endpoint: "",
+                token: "",
+                locationId: ""
             }
         };
         setDevices([...myDevices, newDevice]);

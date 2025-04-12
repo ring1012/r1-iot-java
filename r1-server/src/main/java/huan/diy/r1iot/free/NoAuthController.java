@@ -1,5 +1,6 @@
 package huan.diy.r1iot.free;
 
+import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.service.YoutubeService;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,6 +13,9 @@ import java.util.UUID;
 @RestController
 @CrossOrigin(origins = "*")
 public class NoAuthController {
+
+    @Autowired
+    private AIDirect aidirect;
 
     @Autowired
     private YoutubeService youtubeService;
@@ -37,4 +41,13 @@ public class NoAuthController {
         youtubeService.streamAudio(vId, rangeHeader, response);
     }
 
+    @GetMapping("/test")
+    public String test(@RequestParam String deviceId) {
+
+        String resp = aidirect.getAssistants().get(deviceId).getAssistant().chat("明天天气");
+
+        System.out.println(resp);
+
+        return "success";
+    }
 }

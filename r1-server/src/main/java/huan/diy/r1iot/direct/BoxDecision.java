@@ -14,6 +14,7 @@ import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.service.radio.IRadioService;
+import huan.diy.r1iot.service.weather.IWeatherService;
 import huan.diy.r1iot.util.R1IotUtils;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,7 @@ public class BoxDecision {
                        Map<String, IMusicService> musicServiceMap,
                        Map<String, INewsService> newsServiceMap,
                        Map<String, IAudioService> audioServiceMap,
+                       Map<String, IWeatherService> weatherServiceMap,
                        HassServiceImpl iotService,
                        BoxControllerService boxControllerService,
                        IRadioService radioService) {
@@ -56,6 +58,7 @@ public class BoxDecision {
         this.musicServiceMap = musicServiceMap;
         this.newsServiceMap = newsServiceMap;
         this.audioServiceMap = audioServiceMap;
+        this.weatherServiceMap = weatherServiceMap;
         this.iotService = iotService;
         this.boxControllerService = boxControllerService;
         this.radioService = radioService;
@@ -65,6 +68,7 @@ public class BoxDecision {
     private Map<String, IMusicService> musicServiceMap;
     private Map<String, INewsService> newsServiceMap;
     private Map<String, IAudioService> audioServiceMap;
+    private Map<String, IWeatherService> weatherServiceMap;
     private HassServiceImpl iotService;
     private BoxControllerService boxControllerService;
     private IRadioService radioService;
@@ -111,7 +115,7 @@ public class BoxDecision {
             音箱一般设置：切换氛围灯，音量，停止，休眠等等
             """)
     void voiceBoxSetting(@P(value = "控制对象：氛围灯(lamp)，快进(faster)，快退(slower)，跳到时间(jump)，输出英文", required = false) String target,
-                         @P(value = "执行动作, 比如打开(on)，关闭(off)，切换效果(change)，转成秒的时间(数值)，输出英文", required = false) String action) {
+                         @P(value = "执行动作, 比如打开(on)，关闭(off)，切换效果(change)，时间(数值，单位：秒)，输出英文", required = false) String action) {
         log.info("target: {}, action: {}", target, action);
         if (asked()) {
             return;
@@ -223,6 +227,7 @@ public class BoxDecision {
             """)
     void playRadio(@P("广播名称") String radioName, @P(value = "省份", required = false) String province) {
         if (asked()) {
+            return;
         }
 
 
@@ -232,6 +237,26 @@ public class BoxDecision {
 
 
         R1IotUtils.JSON_RET.set(ret);
+    }
+
+
+    @Tool("""
+            用于查询天气，有默认位置，可以不用说城市
+            samples: 上海浦东后天什么天气
+            AI: locationName=浦东 offsetDay=2
+            """)
+    String queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) int offsetDay) {
+        if (asked()) {
+            return "SUCCESS";
+        }
+
+        log.info("Called queryWeather with locationName={}, offsetDay={}", locationName, offsetDay);
+
+        String ret = weatherServiceMap.get(device.getWeatherConfig().getChoice()).getWeather(locationName, offsetDay, device);
+        R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp(""));
+        R1IotUtils.REPLACE_ANSWER.set(true);
+
+        return "你是专业的天气预报播音员，做一次详细的汇报！注意请说出城市名，温度，风，空气质量，穿衣、户外，气象预警 \n\n" + ret;
 
 
     }

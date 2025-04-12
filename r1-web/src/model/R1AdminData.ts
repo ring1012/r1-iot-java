@@ -10,6 +10,13 @@ export interface HASSConfig {
     token: string;
 }
 
+export interface WeatherConfig {
+    choice: string;
+    endpoint: string;
+    token: string;
+    locationId: string;
+}
+
 export interface MusicConfig {
     choice: string;
     endpoint?: string;
@@ -24,6 +31,7 @@ export interface Device {
     newsConfig: MusicConfig;
     musicConfig: MusicConfig;
     audioConfig: MusicConfig;
+    weatherConfig: WeatherConfig;
 }
 
 export interface ServiceAliasName {
@@ -36,6 +44,8 @@ export interface R1Resources {
     musicList: ServiceAliasName[];
     newsList: ServiceAliasName[];
     audioList: ServiceAliasName[];
+    weatherList: ServiceAliasName[];
+    cityLocations: CityLocation[];
 }
 
 export interface R1AdminData {
@@ -50,3 +60,9 @@ export interface R1GlobalConfig {
     ytdlpEndpoint: string;
     cfServiceId: string;
 }
+
+export interface CityLocation {
+    cityName: string;
+    locationId: string;
+}
+

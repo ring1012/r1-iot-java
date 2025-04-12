@@ -108,7 +108,42 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
                     </Form.Item>
                 </Panel>
 
-                <Panel header="新闻配置" key="5" forceRender>
+                <Panel header="天气配置" key="5" forceRender>
+                    <Form.Item name={["weatherConfig", "choice"]} label="天气源">
+                        <Select className="form-input">
+                            {r1Resources.weatherList.map(item => {
+                                return <Option key={item.serviceName} value={item.serviceName}>{item.aliasName}</Option>
+                            })}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name={["weatherConfig", "endpoint"]} label="天气API地址">
+                        <Input className="form-input" placeholder={"每个人不一样"}/>
+                    </Form.Item>
+                    <Form.Item name={["weatherConfig", "key"]} label="天气API KEY">
+                        <Input className="form-input" placeholder={"不是私钥"}/>
+                    </Form.Item>
+                    <Form.Item name={["weatherConfig", "locationId"]} label="默认城市">
+                        <Select
+                            showSearch
+                            placeholder="请选择城市"
+                            optionFilterProp="children"
+                            filterOption={(input: string, option?: { children: string }) =>
+                                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        >
+                            {r1Resources.cityLocations.map(city => (
+                                <Select.Option
+                                    key={city.locationId}
+                                    value={city.locationId}
+                                >
+                                    {city.cityName}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                </Panel>
+
+                <Panel header="新闻配置" key="6" forceRender>
                     <Form.Item name={["newsConfig", "choice"]} label="新闻源选择">
                         <Select className="form-input">
                             {r1Resources.newsList.map(item => {

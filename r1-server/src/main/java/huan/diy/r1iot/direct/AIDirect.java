@@ -14,6 +14,7 @@ import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.hass.HassServiceImpl;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.service.radio.IRadioService;
+import huan.diy.r1iot.service.weather.IWeatherService;
 import huan.diy.r1iot.util.R1IotUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -45,6 +46,10 @@ public class AIDirect {
     @Autowired
     private Map<String, IMusicService> musicServiceMap;
 
+
+    @Autowired
+    private Map<String, IWeatherService> weatherServiceMap;
+
     @Autowired
     private HassServiceImpl hassService;
 
@@ -54,6 +59,7 @@ public class AIDirect {
     @Autowired
     @Qualifier("defaultRadio")
     private IRadioService radioService;
+
 
     @Getter
     private Map<String, AssistantWithChat> assistants = new ConcurrentHashMap<>();
@@ -118,7 +124,7 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)
                 .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap,  hassService, boxControllerService, radioService))
+                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, weatherServiceMap, hassService, boxControllerService, radioService))
                 .chatMemory(chatMemory)
                 .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
                 .build(), chatMemory));

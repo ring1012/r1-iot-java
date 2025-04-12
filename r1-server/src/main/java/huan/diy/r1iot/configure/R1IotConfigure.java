@@ -2,6 +2,7 @@ package huan.diy.r1iot.configure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import huan.diy.r1iot.model.Channel;
+import huan.diy.r1iot.model.CityLocation;
 import huan.diy.r1iot.model.R1GlobalConfig;
 import huan.diy.r1iot.model.R1Resources;
 import huan.diy.r1iot.service.IWebAlias;
@@ -9,13 +10,21 @@ import huan.diy.r1iot.service.ai.IAIService;
 import huan.diy.r1iot.service.audio.IAudioService;
 import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.music.IMusicService;
+import huan.diy.r1iot.service.weather.IWeatherService;
 import huan.diy.r1iot.util.R1IotUtils;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.*;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -24,13 +33,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static huan.diy.r1iot.util.R1IotUtils.DEVICE_CONFIG_PATH;
 
@@ -64,12 +76,15 @@ public class R1IotConfigure {
     public R1Resources r1Resources(@Autowired List<IAIService> aiServices,
                                    @Autowired List<IMusicService> musicServices,
                                    @Autowired List<INewsService> newsServices,
-                                   @Autowired List<IAudioService> audioServices) {
+                                   @Autowired List<IAudioService> audioServices,
+                                   @Autowired List<IWeatherService> weatherServices,
+                                   @Autowired @Qualifier("cityLocations") List<CityLocation> cityLocations) {
 
         return new R1Resources(aiServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
                 musicServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
                 newsServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
-                audioServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList()
+                audioServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(),
+                weatherServices.stream().map(a -> (IWebAlias) a).map(IWebAlias::serviceAliasName).toList(), cityLocations
         );
     }
 
@@ -78,7 +93,8 @@ public class R1IotConfigure {
         return new ObjectMapper();
     }
 
-    @Bean
+    @Bean("restTemplate")
+    @Primary
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000); // 连接超时
@@ -115,6 +131,37 @@ public class R1IotConfigure {
     }
 
 
+    public static class GzipHttpComponentsClientHttpRequestFactory extends HttpComponentsClientHttpRequestFactory {
+        @Override
+        protected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) {
+            HttpClientContext context = HttpClientContext.create();
+            context.setRequestConfig(RequestConfig.custom()
+                    .setRedirectsEnabled(true)
+                    .build());
+            return context;
+        }
+    }
+
+    @Bean("gzipRestTemplate")
+    public RestTemplate gzipRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+
+        // 添加GZIP支持的拦截器
+        restTemplate.setInterceptors(Collections.singletonList(new ClientHttpRequestInterceptor() {
+            @Override
+            public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+                // 添加接受GZIP编码的请求头
+                request.getHeaders().add("Accept-Encoding", "gzip");
+                return execution.execute(request, body);
+            }
+        }));
+
+        // 设置支持GZIP的ClientHttpRequestFactory
+        restTemplate.setRequestFactory(new GzipHttpComponentsClientHttpRequestFactory());
+        return restTemplate;
+    }
+
+
     @Bean("radios")
     public List<Channel> fetchAndParseM3U(@Autowired RestTemplate restTemplate) {
         try {
@@ -135,6 +182,59 @@ public class R1IotConfigure {
             } catch (Exception ex) {
                 throw new RuntimeException("无法获取广播列表（远程和本地均失败）", ex);
             }
+        }
+    }
+
+    @Bean("cityLocations")
+    public List<CityLocation> fetchAndParseCityList(@Autowired RestTemplate restTemplate) {
+        try {
+            // 1. Try to fetch from GitHub first
+            String remoteUrl = "https://raw.githubusercontent.com/qwd/LocationList/refs/heads/master/China-City-List-latest.csv";
+            String content = restTemplate.getForObject(remoteUrl, String.class);
+            return parseCsvContent(content);
+
+        } catch (Exception e) {
+            // 2. Fallback to local file if remote fetch fails
+            try {
+                InputStream is = new ClassPathResource("China-City-List-latest.csv").getInputStream();
+                String localContent = new BufferedReader(new InputStreamReader(is))
+                        .lines()
+                        .collect(Collectors.joining("\n"));
+                return parseCsvContent(localContent);
+
+            } catch (Exception ex) {
+                throw new RuntimeException("无法获取城市列表数据（远程和本地均失败）", ex);
+            }
+        }
+    }
+
+    private List<CityLocation> parseCsvContent(String content) {
+        if (content == null || content.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<CityLocation> cities = new ArrayList<>();
+        try {
+            // Skip the first line (header comment) and parse from second line
+            String[] lines = content.split("\n");
+
+
+            // Start from line 1 (skip line 0 which is the comment)
+            for (int i = 2; i < lines.length; i++) {
+                String[] columns = lines[i].split(",");
+                if (columns.length >= 3) {
+                    CityLocation city = new CityLocation();
+                    city.setLocationId(columns[0]);
+                    city.setCityName(columns[2]);
+                    city.setLatitude(Double.parseDouble(columns[columns.length - 3]));
+                    city.setLongitude(Double.parseDouble(columns[columns.length - 2]));
+                    cities.add(city);
+                }
+            }
+            return cities;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return cities;
         }
     }
 

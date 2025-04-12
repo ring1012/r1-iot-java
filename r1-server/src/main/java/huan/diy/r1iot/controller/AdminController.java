@@ -1,5 +1,6 @@
 package huan.diy.r1iot.controller;
 
+import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.R1AdminData;
 import huan.diy.r1iot.model.R1GlobalConfig;
@@ -27,6 +28,9 @@ public class AdminController {
 
     @Autowired
     private DeviceService deviceService;
+
+    @Autowired
+    private AIDirect direct;
 
     @GetMapping(value = "/resources")
     public R1AdminData redirect() {
@@ -58,6 +62,8 @@ public class AdminController {
         deviceService.upInsertGlobalConfig(r1GlobalConfig);
         return "success";
     }
+
+
 
 
 }

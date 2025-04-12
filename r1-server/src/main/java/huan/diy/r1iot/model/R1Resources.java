@@ -14,4 +14,6 @@ public class R1Resources {
     private List<ServiceAliasName> musicList;
     private List<ServiceAliasName> newsList;
     private List<ServiceAliasName> audioList;
+    private List<ServiceAliasName> weatherList;
+    private List<CityLocation> cityLocations;
 }

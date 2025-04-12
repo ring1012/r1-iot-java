@@ -15,6 +15,7 @@ public class Device {
     private NewsConfig newsConfig;
     private MusicConfig musicConfig;
     private AudioConfig audioConfig;
+    private WeatherConfig weatherConfig;
 
     // Static inner class for AIConfig
     @Data
@@ -60,5 +61,16 @@ public class Device {
     public static class AudioConfig {
         private String choice;
         private String endpoint;
+    }
+
+    // Static inner class for audio config
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class WeatherConfig {
+        private String choice;
+        private String key;
+        private String endpoint;
+        private String locationId;
     }
 }
