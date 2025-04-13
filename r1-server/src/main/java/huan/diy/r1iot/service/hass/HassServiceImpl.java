@@ -11,10 +11,10 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.IotAiResp;
-import huan.diy.r1iot.service.ai.AiFactory;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,7 +26,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,9 +40,6 @@ public class HassServiceImpl {
 
     @Autowired
     private RestTemplate restTemplateTemp;
-
-    @Autowired
-    private AiFactory aiFactory;
 
     private static final ObjectMapper objectMapper = R1IotUtils.getObjectMapper();
 
@@ -112,37 +108,61 @@ public class HassServiceImpl {
         return filteredEntities;  // 返回过滤后的实体列表
     }
 
-    public String replaceOutPut(JsonNode input, String deviceId) {
-
-        String asrText = input.get("text").asText();
-        IotAiResp aiIot;
+    public String controlHass(String target, String parameter, String actValue, Device device) {
         try {
-            aiIot = aiFactory.hassByAi(deviceId, asrText, HASS_CACHE.get(deviceId));
-        } catch (ExecutionException e) {
+            String deviceId = device.getId();
+            String entityId = findHassEntity(target, HASS_CACHE.get(deviceId));
+            IotAiResp aiIot = new IotAiResp(entityId, actValue, parameter);
+
+            String ttsContent = "";
+
+            String action = aiIot.getAction().trim().toLowerCase();
+            switch (action) {
+                case "on":
+                    switchOperation(deviceId, aiIot.getEntityId(), true);
+                    break;
+
+                case "off":
+                    switchOperation(deviceId, aiIot.getEntityId(), false);
+                    break;
+                case "query":
+                    ttsContent = queryStatus(deviceId, aiIot.getEntityId());
+                    break;
+                case "set":
+                    // todo
+                default:
+
+            }
+
+            return ttsContent;
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        String ttsContent = "";
+    }
 
-        String action = aiIot.getAction().trim().toLowerCase();
-        switch (action) {
-            case "on":
-                switchOperation(deviceId, aiIot.getEntityId(), true);
-                break;
+    private String findHassEntity(String target, JsonNode jsonNode) {
 
-            case "off":
-                switchOperation(deviceId, aiIot.getEntityId(), false);
-                break;
-            case "query":
-                ttsContent = queryStatus(deviceId, aiIot.getEntityId());
-                break;
-            case "set":
-                // todo
-            default:
+        JsonNode mostSimilarChannel = null;
+        int minDistance = Integer.MAX_VALUE;
 
+        LevenshteinDistance levenshtein = new LevenshteinDistance();
+
+        for (JsonNode entity : jsonNode) {
+            String tvgName = entity.get("name").asText();
+
+            // 计算编辑距离（越小越相似）
+            int distance = levenshtein.apply(target, tvgName);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                mostSimilarChannel = entity;
+            }
         }
 
-        return ttsContent;
+
+        return mostSimilarChannel.get("entity_id").textValue();
+
     }
 
     private void switchOperation(String deviceId, String entityId, boolean on) {

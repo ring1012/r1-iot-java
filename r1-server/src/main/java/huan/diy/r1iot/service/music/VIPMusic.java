@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
-import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service("VIP")
 @Slf4j
-public class VIPMusic implements IMusicService, IWebAlias {
+public class VIPMusic implements IMusicService {
 
     @Autowired
     private ObjectMapper objectMapper;

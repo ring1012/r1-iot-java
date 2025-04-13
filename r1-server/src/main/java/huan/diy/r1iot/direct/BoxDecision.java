@@ -140,18 +140,22 @@ public class BoxDecision {
 
     @Tool("""
             智能家居控制，比如打开灯、热得快，空调，调节温度，查询湿度，等等
+            sample: 把客厅空调温度调整为23度
+            AI: target=客厅空调 parameter
             """)
-    String homeassistant(String actionCommand) {
+    String homeassistant(@P(value = "控制对象：主卧空调，热得快。输出中文") String target,
+                         @P(value = "属性：温度（temperature），风速。输出英文", required = false) String parameter,
+                         @P(value = "动作或值：打开(on), 关闭(off)， 23，不需要单位。") String actValue ) {
         if (asked()) {
             return "SUCCESS";
         }
-        log.info("Called homeassistant with  actionCommand={}", actionCommand);
+        log.info("target: {}, parameter: {}, actValue: {}", target, parameter, actValue);
 
         R1IotUtils.REPLACE_ANSWER.set(true);
 
-        String tts = iotService.replaceOutPut(R1IotUtils.JSON_RET.get(), device.getId());
+        String tts = iotService.controlHass(target, parameter, actValue, device);
         if (tts.isEmpty()) {
-            return actionCommand;
+            return "控制失败";
         }
         R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp(tts));
 

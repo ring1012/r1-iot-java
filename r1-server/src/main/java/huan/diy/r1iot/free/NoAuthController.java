@@ -2,6 +2,7 @@ package huan.diy.r1iot.free;
 
 import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.service.YoutubeService;
+import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ public class NoAuthController {
 
     @Autowired
     private YoutubeService youtubeService;
+
+    @Autowired
+    private Map<String, IMusicService> musicServiceMap;
 
     @PostMapping("/auth")
     public String login(@RequestBody final Map<String, String> map) {
@@ -41,10 +45,17 @@ public class NoAuthController {
         youtubeService.streamAudio(vId, rangeHeader, response);
     }
 
+    @GetMapping("/music/{musicSvc}/{songId}.mp3")
+    public void streamMusic(@PathVariable String musicSvc,
+                            @PathVariable String songId,
+                            HttpServletResponse response) throws Exception {
+        musicServiceMap.get(musicSvc).streamMusic(songId, response);
+    }
+
     @GetMapping("/test")
     public String test(@RequestParam String deviceId) {
 
-        String resp = aidirect.getAssistants().get(deviceId).getAssistant().chat("明天天气");
+        String resp = aidirect.getAssistants().get(deviceId).getAssistant().chat("周杰伦的歌");
 
         System.out.println(resp);
 

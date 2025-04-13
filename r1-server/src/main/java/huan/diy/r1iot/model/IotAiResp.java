@@ -10,10 +10,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class IotAiResp {
+
+    @AIDescription("entityId of the target")
+    private String entityId;
+
+
     @AIDescription("action intention of user")
     @AIEnums({"ON", "OFF", "QUERY"})
     private String action;
 
-    @AIDescription("entityId of the target")
-    private String entityId;
+    @AIDescription("such as: temperature")
+    private String parameter;
+
+
 }

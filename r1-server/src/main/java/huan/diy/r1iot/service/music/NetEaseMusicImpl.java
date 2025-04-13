@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
-import huan.diy.r1iot.service.IWebAlias;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ import java.util.*;
 
 @Service("NetEaseMusic")
 @Slf4j
-public class NetEaseMusicImpl implements IMusicService, IWebAlias {
+public class NetEaseMusicImpl implements IMusicService {
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -112,6 +112,11 @@ public class NetEaseMusicImpl implements IMusicService, IWebAlias {
         result.set("result", ret);
 
         return result;
+    }
+
+    @Override
+    public void streamMusic(String songId, HttpServletResponse response) {
+
     }
 
     public JsonNode searchByKeyword(String keyword, Device device) {
