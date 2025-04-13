@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
 import huan.diy.r1iot.model.R1GlobalConfig;
@@ -20,8 +22,8 @@ import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +39,12 @@ public class GequBaoMusicImpl implements IMusicService {
 
     @Autowired
     private R1GlobalConfig globalConfig;
+
+    private static final Cache<String, String> urlCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(30, TimeUnit.MINUTES)
+            .maximumSize(1000)
+            .build();
+
 
     private static final String regex = "window\\.play_id\\s*=\\s*'([^']+)'";
     private static final Pattern pattern = Pattern.compile(regex);
@@ -69,7 +77,7 @@ public class GequBaoMusicImpl implements IMusicService {
             music.put("id", id);
             music.put("title", song.select(".music-title span").text());
             music.put("artist", song.select(".text-jade").text());
-            music.put("url", globalConfig.getHostIp() + "/music/gequbao/" + id +".mp3");
+            music.put("url", globalConfig.getHostIp() + "/music/gequbao/" + id + ".mp3");
             musicInfo.add(music);
         }
 
@@ -89,19 +97,17 @@ public class GequBaoMusicImpl implements IMusicService {
 
     }
 
-    @Override
-    public void streamMusic(String songId, HttpServletResponse response) {
+    private String findPlayUrl(String songId) {
         String url = "https://www.gequbao.com/music/" + songId;
         ResponseEntity<String> gequData = restTemplate.getForEntity(url, String.class);
 
-        Matcher matcher = pattern.matcher(gequData.getBody());
         String playId;
+        Matcher matcher = pattern.matcher(gequData.getBody());
         if (matcher.find()) {
             playId = matcher.group(1);
         } else {
             throw new RuntimeException("music not found");
         }
-
 
         // 2. 设置请求头（JSON 格式）
         HttpHeaders headers = new HttpHeaders();
@@ -121,17 +127,20 @@ public class GequBaoMusicImpl implements IMusicService {
                 requestEntity,
                 JsonNode.class
         );
+        return musicUrlResp.getBody().get("data").get("url").asText();
+    }
+
+    @Override
+    public void streamMusic(String songId, HttpServletResponse response) {
         try {
-            String audioUrl = musicUrlResp.getBody().get("data").get("url").asText();
+            String audioUrl = urlCache.get(songId, () -> findPlayUrl(songId));
             ResponseEntity<Resource> audioResponse = restTemplate.getForEntity(audioUrl, Resource.class);
 
             response.setHeader("Content-Disposition", "inline");
             StreamUtils.copy(audioResponse.getBody().getInputStream(), response.getOutputStream());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+
         }
-
-
     }
 
     @Override
