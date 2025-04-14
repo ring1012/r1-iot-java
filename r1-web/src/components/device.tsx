@@ -82,9 +82,12 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
                     </Form.Item>
 
                     <Row> <Col span={18}>
-                        <Form.Item name={["musicConfig", "endpoint"]} label="音乐源接口">
-                            <Input className="form-input" onChange={(value) => handleEndpointChange(value)}/>
-                        </Form.Item>
+                        {
+                            musicChoice !== "gequbao" &&
+                            <Form.Item name={["musicConfig", "endpoint"]} label="音乐源接口">
+                                <Input className="form-input" onChange={(value) => handleEndpointChange(value)}/>
+                            </Form.Item>
+                        }
                     </Col>
                         <Col>
                             {
