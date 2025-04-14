@@ -39,6 +39,7 @@ public class QWeatherServiceImpl implements IWeatherService {
     private ObjectMapper objectMapper;
 
     @Autowired
+    @Qualifier("gzipRestTemplate")
     private RestTemplate gzipRestTemplate;
 
     @Qualifier("taskExecutor")
@@ -154,16 +155,17 @@ public class QWeatherServiceImpl implements IWeatherService {
     }
 
     private byte[] decompressGzip(byte[] compressed) throws IOException {
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
-             GZIPInputStream gis = new GZIPInputStream(bis);
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = gis.read(buffer)) > 0) {
-                bos.write(buffer, 0, len);
-            }
-            return bos.toByteArray();
-        }
+//        try (ByteArrayInputStream bis = new ByteArrayInputStream(compressed);
+//             GZIPInputStream gis = new GZIPInputStream(bis);
+//             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+//            byte[] buffer = new byte[1024];
+//            int len;
+//            while ((len = gis.read(buffer)) > 0) {
+//                bos.write(buffer, 0, len);
+//            }
+//            return bos.toByteArray();
+//        }
+        return compressed;
     }
 
     private CompletableFuture<JsonNode> getAirQuality(Device device, double latitude, double longitude, int offsetDay) {

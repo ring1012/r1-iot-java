@@ -12,9 +12,15 @@ import huan.diy.r1iot.service.news.INewsService;
 import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.service.weather.IWeatherService;
 import huan.diy.r1iot.util.R1IotUtils;
+import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.DefaultClientConnectionReuseStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.util.TimeValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -93,14 +99,34 @@ public class R1IotConfigure {
         return new ObjectMapper();
     }
 
+
+    @Bean
+    public ClientHttpRequestFactory clientHttpRequestFactory() {
+        // 1. 创建连接池管理器
+        PoolingHttpClientConnectionManager connectionManager =
+                new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(200); // 最大连接数
+        connectionManager.setDefaultMaxPerRoute(20); // 每个路由基础连接数
+
+        // 2. 创建HttpClient
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .build();
+
+        // 3. 使用HttpClient创建RestTemplate
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        factory.setConnectTimeout(10000); // 连接超时(ms)
+        factory.setReadTimeout(30000);    // 读取超时(ms)
+
+        return factory;
+    }
+
     @Bean("restTemplate")
     @Primary
-    public RestTemplate restTemplate() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10000); // 连接超时
-        factory.setReadTimeout(30000);       // 读取超时
+    public RestTemplate restTemplate(@Autowired ClientHttpRequestFactory clientHttpRequestFactory) {
 
-        RestTemplate restTemplate = new RestTemplate(factory);
+        RestTemplate restTemplate = new RestTemplate(clientHttpRequestFactory);
 
         // 忽略 SSL 证书验证（可选）
         try {
@@ -130,8 +156,12 @@ public class R1IotConfigure {
         return restTemplate;
     }
 
-
     public static class GzipHttpComponentsClientHttpRequestFactory extends HttpComponentsClientHttpRequestFactory {
+
+        public GzipHttpComponentsClientHttpRequestFactory(HttpClient httpClient) {
+            super(httpClient);
+        }
+
         @Override
         protected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) {
             HttpClientContext context = HttpClientContext.create();
@@ -144,23 +174,46 @@ public class R1IotConfigure {
 
     @Bean("gzipRestTemplate")
     public RestTemplate gzipRestTemplate() {
+        // 1. 创建连接池管理器
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        // 总连接池大小
+        connectionManager.setMaxTotal(200);
+        // 每个主机的最大并行连接数
+        connectionManager.setDefaultMaxPerRoute(50);
+
+        // 2. 配置HttpClient
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                // 启用连接复用（默认为true，可以省略）
+                .setConnectionReuseStrategy(DefaultClientConnectionReuseStrategy.INSTANCE)
+                // 连接存活时间（可选）
+                .setKeepAliveStrategy((response, context) -> TimeValue.ofMinutes(30))
+                .build();
+
+        // 3. 创建支持GZIP的RestTemplate
         RestTemplate restTemplate = new RestTemplate();
 
         // 添加GZIP支持的拦截器
         restTemplate.setInterceptors(Collections.singletonList(new ClientHttpRequestInterceptor() {
             @Override
-            public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+            public ClientHttpResponse intercept(HttpRequest request, byte[] body,
+                                                ClientHttpRequestExecution execution) throws IOException {
                 // 添加接受GZIP编码的请求头
                 request.getHeaders().add("Accept-Encoding", "gzip");
                 return execution.execute(request, body);
             }
         }));
 
-        // 设置支持GZIP的ClientHttpRequestFactory
-        restTemplate.setRequestFactory(new GzipHttpComponentsClientHttpRequestFactory());
+
+        GzipHttpComponentsClientHttpRequestFactory requestFactory =
+                new GzipHttpComponentsClientHttpRequestFactory(httpClient);
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(30000);
+        // 设置支持GZIP和连接池的ClientHttpRequestFactory
+        restTemplate.setRequestFactory(requestFactory);
+
         return restTemplate;
     }
-
 
     @Bean("radios")
     public List<Channel> fetchAndParseM3U(@Autowired RestTemplate restTemplate) {
