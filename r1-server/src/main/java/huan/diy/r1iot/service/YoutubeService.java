@@ -241,7 +241,7 @@ public class YoutubeService {
             sb.append("http://");
         }
         sb.append(remoteYtDlp);
-        sb.append("/get_youtube_url?vId=");
+        sb.append("?vId=");
         sb.append(vId);
 
 

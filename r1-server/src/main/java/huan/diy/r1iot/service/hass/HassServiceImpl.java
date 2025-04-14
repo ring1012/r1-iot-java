@@ -114,7 +114,7 @@ public class HassServiceImpl {
             String entityId = findHassEntity(target, HASS_CACHE.get(deviceId));
             IotAiResp aiIot = new IotAiResp(entityId, actValue, parameter);
 
-            String ttsContent = "";
+            String ttsContent = "SUCCESS";
 
             String action = aiIot.getAction().trim().toLowerCase();
             switch (action) {
