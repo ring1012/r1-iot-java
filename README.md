@@ -12,15 +12,3 @@ docker run  --pull=always  --restart=always --name="r1" -it -d --network=host -e
 
 ```
 
-
-### 卢恩
-如果你觉得我的方案对你有帮助，感谢打赏！
-
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/6eea2926-b718-4cc1-ab92-46f07d8d2dbb" width="45%" />
-  <img src="https://github.com/user-attachments/assets/0617153e-b7a2-4c5a-b57c-1256863a7d47" width="45%" />
-</p>
-
-
-
