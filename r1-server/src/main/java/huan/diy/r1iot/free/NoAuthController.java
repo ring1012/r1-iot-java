@@ -3,6 +3,7 @@ package huan.diy.r1iot.free;
 import huan.diy.r1iot.direct.AIDirect;
 import huan.diy.r1iot.service.YoutubeService;
 import huan.diy.r1iot.service.music.IMusicService;
+import huan.diy.r1iot.service.radio.IRadioService;
 import huan.diy.r1iot.util.R1IotUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class NoAuthController {
 
     @Autowired
     private Map<String, IMusicService> musicServiceMap;
+
+    @Autowired
+    private Map<String, IRadioService> radioServiceMap;
 
     @PostMapping("/auth")
     public String login(@RequestBody final Map<String, String> map) {
@@ -50,6 +54,17 @@ public class NoAuthController {
                             @PathVariable String songId,
                             HttpServletResponse response) throws Exception {
         musicServiceMap.get(musicSvc).streamMusic(songId, response);
+    }
+
+
+    @GetMapping("/stream/{type}/{resourceUrl}.m3u8")
+    public void streamM3U8(@PathVariable String type,
+                           @PathVariable String resourceUrl,
+                           HttpServletResponse response) throws Exception {
+        if (!type.equals("radio")) {
+            return;
+        }
+        radioServiceMap.get("defaultRadio").streamRadio(resourceUrl, response);
     }
 
     @GetMapping("/test")
