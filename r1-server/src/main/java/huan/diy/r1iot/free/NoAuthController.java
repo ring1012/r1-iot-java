@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -75,5 +76,12 @@ public class NoAuthController {
         System.out.println(resp);
 
         return "success";
+    }
+
+    @GetMapping("/getUserInfo")
+    public Map<String, String> getUserInfo() {
+        Map<String, String> map = new HashMap<>();
+        map.put("status", "0");
+        return map;
     }
 }

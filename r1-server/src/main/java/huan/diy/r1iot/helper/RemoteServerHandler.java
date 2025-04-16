@@ -59,6 +59,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
 //            log.info("asr result: {}", asrResult);
             Channel clientChannel = ctx.channel().attr(TcpChannelUtils.CLIENT_CHANNEL).get();
+            String deviceId = clientChannel.attr(TcpChannelUtils.DEVICE_ID).get();
             if (clientChannel == null) {
                 return;
             }
@@ -115,8 +116,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                 R1IotUtils.CLIENT_IP.set(clientIp);
             }
 
-            String aiReply = asrServerHandler.enhance(asrText.toString(), rawData,
-                    ctx.channel().attr(TcpChannelUtils.DEVICE_ID).get());
+            String aiReply = asrServerHandler.enhance(asrText.toString(), rawData, deviceId);
 
             Matcher matcher = pattern.matcher(rawData);
             String pnValue = null;
