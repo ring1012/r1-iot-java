@@ -205,7 +205,7 @@ public class QWeatherServiceImpl implements IWeatherService {
         return CompletableFuture.supplyAsync(() -> {
 
             try {
-                String url = device.getWeatherConfig().getEndpoint() + "/v7/indices/3d?type=0&location=" + locationId;
+                String url = device.getWeatherConfig().getEndpoint() + "/v7/indices/3d?type=1,3,6&location=" + locationId;
                 HttpHeaders headers = createHeadersWithApiKey(device.getWeatherConfig().getKey());
                 HttpEntity<String> entity = new HttpEntity<>(headers);
 
