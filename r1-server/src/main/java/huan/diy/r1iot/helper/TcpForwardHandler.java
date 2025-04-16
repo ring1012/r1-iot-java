@@ -6,6 +6,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -53,8 +54,14 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
 //        log.info("from client: {}", body);
 //            new Thread(new PCMDataAggregator(data.toString(StandardCharsets.ISO_8859_1).getBytes(StandardCharsets.ISO_8859_1))).start();
         String deviceId = setupCurrentDevice(data.toString(StandardCharsets.ISO_8859_1));
-        ctx.channel().attr(TcpChannelUtils.DEVICE_ID).set(deviceId);
+        if (StringUtils.hasLength(deviceId)) {
+            ctx.channel().attr(TcpChannelUtils.DEVICE_ID).set(deviceId);
+        }
         Channel remoteChannel = ctx.channel().attr(TcpChannelUtils.REMOTE_CHANNEL).get();
+        if (remoteChannel != null && StringUtils.hasLength(deviceId)) {
+            remoteChannel.attr(TcpChannelUtils.DEVICE_ID).set(deviceId);
+        }
+
         if (remoteChannel != null && remoteChannel.isActive()) {
             remoteChannel.writeAndFlush(data.retain());
             return;

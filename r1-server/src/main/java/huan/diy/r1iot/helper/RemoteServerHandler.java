@@ -59,10 +59,11 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
 //            log.info("asr result: {}", asrResult);
             Channel clientChannel = ctx.channel().attr(TcpChannelUtils.CLIENT_CHANNEL).get();
-            String deviceId = clientChannel.attr(TcpChannelUtils.DEVICE_ID).get();
             if (clientChannel == null) {
                 return;
             }
+
+            String deviceId = clientChannel.attr(TcpChannelUtils.DEVICE_ID).get();
 
             if (!data.contains("PN: q") && taskFuture == null) {
                 // 创建任务
