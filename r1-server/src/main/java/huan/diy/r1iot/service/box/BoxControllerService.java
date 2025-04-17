@@ -51,7 +51,7 @@ public class BoxControllerService {
                     });
 
             ChannelFuture future = bootstrap.connect(uri.getHost(), uri.getPort());
-            if (!future.await(200, TimeUnit.MILLISECONDS)) {
+            if (!future.await(800, TimeUnit.MILLISECONDS)) {
                 log.info("连接超时");
                 return false;
             }

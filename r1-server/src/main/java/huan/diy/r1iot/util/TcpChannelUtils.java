@@ -10,6 +10,6 @@ public class TcpChannelUtils {
     public static final AttributeKey<Boolean> END = AttributeKey.valueOf("END");
     public static final AttributeKey<String> CLIENT_IP = AttributeKey.valueOf("CLIENT_IP");
     // 远程服务器地址
-    public static final String REMOTE_HOST = "asrv3.hivoice.cn";  // 目标服务器 IP
+    public static final String REMOTE_HOST = "39.105.252.245";  // 目标服务器 IP
     public static final int REMOTE_PORT = 80;  // 远程服务器的端口
 }
