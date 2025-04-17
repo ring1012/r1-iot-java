@@ -185,15 +185,12 @@ public class BoxDecision {
             samples: 上海浦东后天什么天气
             AI: locationName=浦东 offsetDay=2
             """)
-    String queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) int offsetDay) {
+    void queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) int offsetDay) {
 
         log.info("Called queryWeather with locationName={}, offsetDay={}", locationName, offsetDay);
 
         String ret = weatherServiceMap.get(device.getWeatherConfig().getChoice()).getWeather(locationName, offsetDay, device);
-        R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp(""));
-
-        return "你是专业的天气预报播音员，做一次详细的汇报！注意请说出城市名，温度，风，空气质量，穿衣、户外，气象预警 \n\n" + ret;
-
+        R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp(ret));
 
     }
 

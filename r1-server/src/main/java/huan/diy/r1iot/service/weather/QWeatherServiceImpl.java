@@ -92,22 +92,24 @@ public class QWeatherServiceImpl implements IWeatherService {
         try {
 
             // 3. 并发调用三个API
-            CompletableFuture<JsonNode> weatherFuture = forecast(device, locationId, offsetDay);
-            CompletableFuture<JsonNode> airQualityFuture = getAirQuality(device, latitude, longitude, offsetDay);
-            CompletableFuture<JsonNode> indicesFuture = getIndices(device, locationId, offsetDay);
-            CompletableFuture<JsonNode> warningFuture = getWarnings(device, locationId);
+            CompletableFuture<String> weatherFuture = forecast(device, locationId, offsetDay);
+            CompletableFuture<String> airQualityFuture = getAirQuality(device, latitude, longitude, offsetDay);
+            CompletableFuture<String> indicesFuture = getIndices(device, locationId, offsetDay);
+            CompletableFuture<String> warningFuture = getWarnings(device, locationId);
 
             // 等待所有请求完成
             CompletableFuture.allOf(weatherFuture, airQualityFuture, indicesFuture).join();
 
             // 4. 聚合结果
-            ObjectNode result = objectMapper.createObjectNode();
-            result.set("forecast", weatherFuture.get());
-            result.set("airQuality", airQualityFuture.get());
-            result.set("indices", indicesFuture.get());
-            result.set("warnings", warningFuture.get());
-
-            return "用户指定的城市是:" + locationName + " \n\nresult:" + result;
+            String dayStr = "";
+            if (offsetDay == 0) {
+                dayStr = "今天";
+            } else if (offsetDay == 1) {
+                dayStr = "明天";
+            } else if (offsetDay == 2) {
+                dayStr = "后天";
+            }
+            return locationName + dayStr + "的天气情况是：" + weatherFuture.get() + airQualityFuture.get() + indicesFuture.get() + warningFuture.get();
         } catch (Exception e) {
             return null;
         }
@@ -116,7 +118,7 @@ public class QWeatherServiceImpl implements IWeatherService {
     }
 
 
-    private CompletableFuture<JsonNode> getWarnings(Device device, String locationId) {
+    private CompletableFuture<String> getWarnings(Device device, String locationId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String url = device.getWeatherConfig().getEndpoint() + "/v7/warning/now?location=" + locationId;
@@ -127,7 +129,12 @@ public class QWeatherServiceImpl implements IWeatherService {
                         url, HttpMethod.GET, entity, byte[].class);
 
 
-                return objectMapper.readTree(decompressGzip(response.getBody())).get("warning");
+                JsonNode data = objectMapper.readTree(decompressGzip(response.getBody())).get("warning");
+                StringBuilder sb = new StringBuilder();
+                for (JsonNode node : data) {
+                    sb.append(node.get("text").asText()).append("。");
+                }
+                return sb.toString();
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
                 return null;
@@ -137,7 +144,7 @@ public class QWeatherServiceImpl implements IWeatherService {
         }, taskExecutor);
     }
 
-    private CompletableFuture<JsonNode> forecast(Device device, String locationId, int offsetDay) {
+    private CompletableFuture<String> forecast(Device device, String locationId, int offsetDay) {
         return CompletableFuture.supplyAsync(() -> {
 
             try {
@@ -149,7 +156,11 @@ public class QWeatherServiceImpl implements IWeatherService {
                         url, HttpMethod.GET, entity, byte[].class);
 
                 JsonNode resp = objectMapper.readTree(decompressGzip(response.getBody()));
-                return resp.get("daily").get(offsetDay);
+                JsonNode data = resp.get("daily").get(offsetDay);
+                return "温度为" + data.get("tempMin").asText() + "度到" + data.get("tempMax").asText() + "度，" +
+                        "白天" + data.get("textDay").asText() + "，晚上" + data.get("textNight").asText() + "，" +
+                        data.get("windDirDay").asText() + "，风力" + data.get("windScaleDay").asText() + "级。";
+
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
                 return null;
@@ -173,7 +184,7 @@ public class QWeatherServiceImpl implements IWeatherService {
         return compressed;
     }
 
-    private CompletableFuture<JsonNode> getAirQuality(Device device, double latitude, double longitude, int offsetDay) {
+    private CompletableFuture<String> getAirQuality(Device device, double latitude, double longitude, int offsetDay) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String url = String.format("%s/airquality/v1/daily/%.4f/%.4f",
@@ -185,7 +196,8 @@ public class QWeatherServiceImpl implements IWeatherService {
                         url, HttpMethod.GET, entity, byte[].class);
 
                 JsonNode resp = objectMapper.readTree(decompressGzip(response.getBody()));
-                return resp.get("days").get(offsetDay);
+                JsonNode data = resp.get("days").get(offsetDay);
+                return ("空气质量" + data.get("indexes").get(0).get("category").asText()) + "。";
 
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
@@ -206,7 +218,7 @@ public class QWeatherServiceImpl implements IWeatherService {
         return newDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE);
     }
 
-    private CompletableFuture<JsonNode> getIndices(Device device, String locationId, int offsetDay) {
+    private CompletableFuture<String> getIndices(Device device, String locationId, int offsetDay) {
         return CompletableFuture.supplyAsync(() -> {
 
             try {
@@ -221,15 +233,15 @@ public class QWeatherServiceImpl implements IWeatherService {
 
                 String dayString = addDaysToIsoDate(node.get("updateTime").asText(), offsetDay);
 
-                ArrayNode ret = objectMapper.createArrayNode();
+                StringBuilder sb = new StringBuilder();
                 for (JsonNode each : node.get("daily")) {
                     if (each.get("date").asText().equals(dayString)) {
-                        ret.add(each);
+                        sb.append(each.get("text").asText()).append("。");
                     }
                 }
 
 
-                return ret;
+                return sb.toString();
             } catch (Exception e) {
                 log.error(e.getMessage(), e);
                 return null;

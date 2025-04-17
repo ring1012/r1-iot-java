@@ -36,7 +36,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private Future<?> taskFuture = null;
-    private AtomicInteger delayMs = new AtomicInteger(760);
+    private AtomicInteger delayMs = new AtomicInteger(860);
 
     private StringBuffer accumulatedData = new StringBuffer();
     private StringBuffer asrText = new StringBuffer();
@@ -44,11 +44,6 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     private AtomicReference<String> stopRef = new AtomicReference<>("zz");
 
     private static final Pattern pattern = Pattern.compile("PN:\\s*(\\S+)");
-
-
-    public synchronized void appendData(String data) {
-        accumulatedData.append(data);
-    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -77,7 +72,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                 case DROPPED, SKIP:
                     return;
                 case APPEND:
-                    appendData(asrResult.getFixedData());
+                    accumulatedData.append(asrResult.getFixedData());
                     try {
                         String[] lines = accumulatedData.toString().split("\n");
                         JsonNode node = objectMapper.readTree(lines[lines.length - 1]);
@@ -91,7 +86,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
                     }
                 case END:
                     handling.compareAndSet(false, true);
-                    appendData(asrResult.getFixedData());
+                    accumulatedData.append(asrResult.getFixedData());
                     break;
                 case PREFIX:
                     asrText.append(asrResult.getFixedData());
@@ -105,7 +100,6 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
 
             if (clientChannel.attr(TcpChannelUtils.END).get() != Boolean.TRUE) {
                 asrText.append(asrResult.getFixedData());
-                accumulatedData.setLength(0);
                 return;
             }
 

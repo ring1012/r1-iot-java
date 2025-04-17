@@ -71,28 +71,10 @@ public class AiAssistant {
         ToolExecutionResultMessage toolExecutionResultMessage = ToolExecutionResultMessage.from(toolExecutionRequest, result);
 
         log.info(toolExecutionResultMessage.toString());
+        chatMessages.add(toolExecutionResultMessage);
 
-        if (toolExecutionResultMessage.text().equals("Success")) {
-            return null;
-        }
+        return null;
 
-        String funcResp = toolExecutionResultMessage.text();
-        reqMessages = new ArrayList<>();
-        reqMessages.add(new SystemMessage(systemPrompt + """
-                
-                注意：
-                你是一个中文助手百科全书，可以回答用户的提问！
-                """));
-        reqMessages.add(userMessage(funcResp));
-        ChatRequest chatRequest2 = ChatRequest.builder()
-                .messages(reqMessages)
-                .parameters(ChatRequestParameters.builder()
-                        .toolSpecifications(toolSpecifications)
-                        .build())
-                .build();
-        ChatResponse finalChatResponse = openAiModel.chat(chatRequest2);
-
-        return finalChatResponse.aiMessage().text().replaceAll(R1IotUtils.CHINESE, "");
     }
 
 }

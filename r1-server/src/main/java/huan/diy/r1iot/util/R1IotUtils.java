@@ -56,7 +56,7 @@ public class R1IotUtils {
         objectNode.put("confidence", 0.8);
         objectNode.put("history", "cn.yunzhisheng.chat");
         objectNode.put("source", "nlu");
-        objectNode.put("asr_recongize", "");
+        objectNode.put("asr_recongize", "OK");
         objectNode.put("rc", 0);
 
         ObjectNode general = objectMapper.createObjectNode();
@@ -72,7 +72,7 @@ public class R1IotUtils {
         objectNode.put("retTag", "nlu");
         objectNode.put("service", "cn.yunzhisheng.chat");
         objectNode.put("nluProcessTime", "717");
-        objectNode.put("text", ttsContent);
+        objectNode.put("text", "OK");
         objectNode.put("responseId", "9a83414b09024d9d85df88aa07cad8c9");
 
         return objectNode;
