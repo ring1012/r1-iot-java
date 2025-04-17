@@ -16,6 +16,7 @@ import huan.diy.r1iot.service.music.IMusicService;
 import huan.diy.r1iot.service.radio.IRadioService;
 import huan.diy.r1iot.service.weather.IWeatherService;
 import huan.diy.r1iot.util.R1IotUtils;
+import jakarta.annotation.PostConstruct;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -60,17 +61,9 @@ public class AIDirect {
     @Qualifier("defaultRadio")
     private IRadioService radioService;
 
-
     @Getter
-    private Map<String, AssistantWithChat> assistants = new ConcurrentHashMap<>();
+    private Map<String, AiAssistant> assistants = new ConcurrentHashMap<>();
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class AssistantWithChat{
-        private Assistant assistant;
-        private ChatMemory chatMemory;
-    }
 
     public static class GuavaChatMemory implements ChatMemory {
         private final Cache<String, List<ChatMessage>> messageCache;
@@ -87,7 +80,12 @@ public class AIDirect {
 
         @Override
         public List<ChatMessage> messages() {
-            return messageCache.getIfPresent(key);
+            List<ChatMessage> cached = messageCache.getIfPresent(key);
+            if (cached == null) {
+                cached = new ArrayList<>();
+            }
+            messageCache.put(key, cached);
+            return cached;
         }
 
         @Override
@@ -119,24 +117,12 @@ public class AIDirect {
         if (device.getAiConfig() == null) {
             return;
         }
-        ChatMemory chatMemory = new GuavaChatMemory(deviceId, 2, TimeUnit.MINUTES, Math.max(8, device.getAiConfig().getChatHistoryNum()));
+        ChatMemory chatMemory = new GuavaChatMemory(deviceId, 2, TimeUnit.MINUTES, Math.max(4, device.getAiConfig().getChatHistoryNum()));
         IAIService aiService = aiServiceMap.get(device.getAiConfig().getChoice());
         ChatLanguageModel model = aiService.buildModel(device);
-        assistants.put(deviceId, new AssistantWithChat(AiServices.builder(Assistant.class)
-                .chatLanguageModel(model)
-                .tools(new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, weatherServiceMap, hassService, boxControllerService, radioService))
-                .chatMemory(chatMemory)
-                .systemMessageProvider(generateSystemPromptFunc(device.getAiConfig().getSystemPrompt()))
-                .build(), chatMemory));
+        assistants.put(deviceId, new AiAssistant(model, device.getAiConfig().getSystemPrompt(),
+                new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, weatherServiceMap, hassService, boxControllerService, radioService),
+                chatMemory));
     }
-
-    public static Function<Object, String> generateSystemPromptFunc(String systemPrompt) {
-        return (context) -> systemPrompt + """
-                
-                注意：
-                你是一个中文的助手！
-                """;
-    }
-
 
 }

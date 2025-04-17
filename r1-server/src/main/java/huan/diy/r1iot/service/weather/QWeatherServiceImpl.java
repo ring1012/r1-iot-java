@@ -73,6 +73,11 @@ public class QWeatherServiceImpl implements IWeatherService {
 
         } else {
             locationId = device.getWeatherConfig().getLocationId();
+            for (CityLocation cityLocation : cityLocations) {
+                if (cityLocation.getLocationId().equals(locationId)) {
+                    locationName = cityLocation.getCityName();
+                }
+            }
         }
 
         if (mostSimilarCity == null) {
@@ -102,7 +107,7 @@ public class QWeatherServiceImpl implements IWeatherService {
             result.set("indices", indicesFuture.get());
             result.set("warnings", warningFuture.get());
 
-            return locationName + result.toString();
+            return "用户指定的城市是:" + locationName + " \n\nresult:" + result;
         } catch (Exception e) {
             return null;
         }

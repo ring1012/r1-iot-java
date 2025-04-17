@@ -20,7 +20,7 @@ public class GrokAiX implements IAIService, IWebAlias {
 
     public GrokAiX() {
         this.BASE_URL = "https://api.x.ai/v1";
-        this.MODEL = "grok-2-latest";
+        this.MODEL = "grok-3-mini-fast-latest";
     }
 
     @Autowired

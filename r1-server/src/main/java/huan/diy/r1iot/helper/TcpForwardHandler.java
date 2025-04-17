@@ -105,7 +105,7 @@ public class TcpForwardHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("TCP Server error", cause);
-        ctx.close();
+//        ctx.close();
     }
 
     @Override

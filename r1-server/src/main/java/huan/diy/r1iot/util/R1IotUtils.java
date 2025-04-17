@@ -38,15 +38,11 @@ public class R1IotUtils {
     public static final String DEVICE_CONFIG_PATH = System.getProperty("user.home") + "/.r1-iot";
 
     public ThreadLocal<JsonNode> JSON_RET = new ThreadLocal<>();
-    public ThreadLocal<Boolean> REPLACE_ANSWER = new ThreadLocal<>();
-    public ThreadLocal<Boolean> ONLY_ONCE = new ThreadLocal<>();
     public ThreadLocal<String> CLIENT_IP = new ThreadLocal<>();
 
 
     public void remove() {
         JSON_RET.remove();
-        REPLACE_ANSWER.remove();
-        ONLY_ONCE.remove();
         CLIENT_IP.remove();
     }
 
@@ -60,7 +56,7 @@ public class R1IotUtils {
         objectNode.put("confidence", 0.8);
         objectNode.put("history", "cn.yunzhisheng.chat");
         objectNode.put("source", "nlu");
-        objectNode.put("asr_recongize", ttsContent);
+        objectNode.put("asr_recongize", "");
         objectNode.put("rc", 0);
 
         ObjectNode general = objectMapper.createObjectNode();

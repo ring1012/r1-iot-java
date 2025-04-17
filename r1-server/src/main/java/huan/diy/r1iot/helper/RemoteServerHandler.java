@@ -36,7 +36,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private Future<?> taskFuture = null;
-    private AtomicInteger delayMs = new AtomicInteger(960);
+    private AtomicInteger delayMs = new AtomicInteger(760);
 
     private StringBuffer accumulatedData = new StringBuffer();
     private StringBuffer asrText = new StringBuffer();
@@ -57,7 +57,6 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             String data = responseData.toString(StandardCharsets.UTF_8);
 //            log.info("each data from remote server: {}", data);
 
-//            log.info("asr result: {}", asrResult);
             Channel clientChannel = ctx.channel().attr(TcpChannelUtils.CLIENT_CHANNEL).get();
             if (clientChannel == null) {
                 return;
@@ -72,6 +71,7 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             }
 
             AsrResult asrResult = asrServerHandler.handle(data);
+//            log.info("asr result: {}", asrResult);
 
             switch (asrResult.getType()) {
                 case DROPPED, SKIP:
