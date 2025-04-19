@@ -104,6 +104,9 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             }
 
             String rawData = accumulatedData.toString();
+
+            rawData = extractLastEligible(rawData);
+
             log.info("from R1: {} {}", asrText.toString(), rawData);
 
             String clientIp = clientChannel.attr(TcpChannelUtils.CLIENT_IP).get();
@@ -143,6 +146,16 @@ public class RemoteServerHandler extends ChannelInboundHandlerAdapter {
             accumulatedData.setLength(0);  // 清空累积的数据
 
         }
+    }
+
+    public String extractLastEligible(String httpResponse) {
+        // Split the response by "HTTP/1.1 200" to get all blocks
+        String[] blocks = httpResponse.split("(?=HTTP/1.1 200)");
+
+        // The last block will be the one we want
+        String lastBlock = blocks[blocks.length - 1];
+
+        return lastBlock;
     }
 
 
