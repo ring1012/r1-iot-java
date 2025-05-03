@@ -57,7 +57,7 @@ public class NoAuthController {
     @GetMapping("/test")
     public String test(@RequestParam String deviceId) {
 
-        String resp = aidirect.getAssistants().get(deviceId).chat("我想听上海交通广播");
+        String resp = aidirect.getAssistants().get(deviceId).chat("我想听周杰伦的歌");
 
         System.out.println(resp);
 
