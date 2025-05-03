@@ -22,17 +22,14 @@ import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @Service("defaultRadio")
@@ -40,8 +37,8 @@ import java.util.concurrent.TimeUnit;
 public class DefaultRadioServiceImpl implements IRadioService {
 
     private static final Cache<String, String> urlCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(25, TimeUnit.MINUTES)  // 写入后6hours过期
-            .maximumSize(1000)                       // 最大缓存1000个条目
+            .expireAfterWrite(25, TimeUnit.MINUTES)
+            .maximumSize(1000)
             .build();
 
     @Autowired
@@ -55,6 +52,7 @@ public class DefaultRadioServiceImpl implements IRadioService {
     @Qualifier("objectMapper")
     @Autowired
     private ObjectMapper objectMapper;
+
 
     @Override
     public JsonNode fetchRadio(String radioName, String province, Device device) {
@@ -75,7 +73,13 @@ public class DefaultRadioServiceImpl implements IRadioService {
             }
         }
 
-        String link = fetchM3u8Url(mostSimilarChannel.id());
+        String id = mostSimilarChannel.id();
+        String link = null;
+        try {
+            link = urlCache.get(id, () -> fetchM3u8Url(id));
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         return R1IotUtils.streamRespSample(link);
 
     }
