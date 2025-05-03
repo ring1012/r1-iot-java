@@ -63,6 +63,12 @@ public class AdminController {
         return "success";
     }
 
+    @DeleteMapping("/device/{deviceId}")
+    public String deviceOne(@PathVariable final String deviceId) {
+        deviceService.deleteById(deviceId);
+        return "success";
+    }
+
 
 
 

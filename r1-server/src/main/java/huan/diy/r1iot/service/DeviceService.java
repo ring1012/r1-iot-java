@@ -26,4 +26,7 @@ public class DeviceService {
         return deviceDao.upInsertGlobalConfig(config);
     }
 
+    public int deleteById(String id) {
+        return deviceDao.deleteById(id);
+    }
 }

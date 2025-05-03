@@ -101,7 +101,7 @@ public class BoxDecision {
     }
 
     @Tool("""
-            音箱一般设置：切换氛围灯，音量，停止，休眠，播放模式（单曲循环，顺序）等等
+            音箱一般设置：切换氛围灯，音量，停止，休眠，安静，播放模式（单曲循环，顺序）等等
             """)
     void voiceBoxSetting(@P(value = "控制对象：氛围灯(lamp)，快进(faster)，快退(slower)，跳到时间(jump)，输出英文", required = false) String target,
                          @P(value = "执行动作, 比如打开(on)，关闭(off)，切换效果(change)，时间(数值，需要你帮忙转成秒)，输出英文", required = false) String action) {

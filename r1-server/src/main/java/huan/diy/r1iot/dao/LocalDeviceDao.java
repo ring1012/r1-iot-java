@@ -164,4 +164,21 @@ public class LocalDeviceDao {
     }
 
 
+    public int deleteById(String id) {
+
+        // 获取文件路径，文件名就是 device.getId() + ".json"
+        File deviceFile = new File(DEVICE_CONFIG_PATH, id + ".json");
+
+        // 如果文件存在，先删除它
+        if (deviceFile.exists()) {
+            if (deviceFile.delete()) {
+                log.info("Deleted old device file: " + deviceFile.getName());
+            } else {
+                log.error("Failed to delete old device file: " + deviceFile.getName());
+                return 0; // 删除失败，返回失败
+            }
+        }
+
+        return 1;
+    }
 }

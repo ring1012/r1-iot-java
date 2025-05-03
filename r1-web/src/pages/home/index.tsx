@@ -145,9 +145,23 @@ const Box: React.FC = () => {
         }
     };
 
-    const handleDeleteDevice = (deviceId: string) => {
+    const handleDeleteDevice = async (deviceId: string) => {
         const confirmDelete = window.confirm("确定要删除该设备吗？");
         if (confirmDelete) {
+
+            try {
+                await axiosInstance.delete(`${apiURL}admin/device/${deviceId}`)
+                message.success("设备配置保存成功！", 2);
+
+            } catch (err) {
+                const error = err as AxiosError; // 类型断言为 AxiosError
+                if (error.response && error.response.status === 403) {
+                    setShowPasswordModal(true);
+                } else {
+                    console.error('Error:', error.message);
+                }
+            }
+
             const updatedDevices = devices.filter((device) => device.id !== deviceId);
             setDevices(updatedDevices);
             if (deviceId === activeDeviceId && updatedDevices.length > 0) {

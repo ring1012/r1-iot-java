@@ -57,6 +57,9 @@ import static huan.diy.r1iot.util.R1IotUtils.DEVICE_CONFIG_PATH;
 @EnableAsync
 public class R1IotConfigure {
 
+    private static final Pattern RADIO_PATTERN =
+            Pattern.compile("^([^,]+),.*[?&]id=(\\d+)");
+
     @Bean
     public R1GlobalConfig r1GlobalConfig() {
         Path path = Paths.get(DEVICE_CONFIG_PATH, "global.conf");
@@ -216,25 +219,16 @@ public class R1IotConfigure {
     }
 
     @Bean("radios")
-    public List<Channel> fetchAndParseM3U(@Autowired RestTemplate restTemplate) {
+    public List<Channel> fetchAndParseM3U() {
         try {
-            // 1. 尝试从 GitHub 获取最新版本
-            String remoteUrl = "https://raw.githubusercontent.com/fanmingming/live/main/radio/m3u/fm.m3u";
-            String content = restTemplate.getForObject(remoteUrl, String.class);
-            return parseM3UContent(content);
+            InputStream is = new ClassPathResource("radio.txt").getInputStream();
+            String localContent = new BufferedReader(new InputStreamReader(is))
+                    .lines()
+                    .reduce("", (a, b) -> a + "\n" + b);
+            return parseM3UContent(localContent);
 
-        } catch (Exception e) {
-            // 2. 远程获取失败，回退到本地文件
-            try {
-                InputStream is = new ClassPathResource("fm.m3u").getInputStream();
-                String localContent = new BufferedReader(new InputStreamReader(is))
-                        .lines()
-                        .reduce("", (a, b) -> a + "\n" + b);
-                return parseM3UContent(localContent);
-
-            } catch (Exception ex) {
-                throw new RuntimeException("无法获取广播列表（远程和本地均失败）", ex);
-            }
+        } catch (Exception ex) {
+            throw new RuntimeException("无法获取广播列表（远程和本地均失败）", ex);
         }
     }
 
@@ -293,14 +287,14 @@ public class R1IotConfigure {
 
     private List<Channel> parseM3UContent(String content) {
         List<Channel> channels = new ArrayList<>();
-        Pattern pattern = Pattern.compile(
-                "#EXTINF:.*tvg-name=\"([^\"]*)\".*group-title=\"([^\"]*)\".*\\n(http[^\\s]*)"
-        );
-
-        Matcher matcher = pattern.matcher(content);
-        while (matcher.find()) {
-            Channel channel = new Channel(matcher.group(1), matcher.group(2), matcher.group(3));
-            channels.add(channel);
+        for (String input : content.split("\n")) {
+            Matcher matcher = RADIO_PATTERN.matcher(input);
+            if (matcher.find()) {
+                String radioName = matcher.group(1);
+                String id = matcher.group(2);
+                Channel channel = new Channel(radioName, "", id);
+                channels.add(channel);
+            }
         }
         return channels;
     }
