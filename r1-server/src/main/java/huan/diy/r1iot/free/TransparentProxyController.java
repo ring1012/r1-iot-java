@@ -75,6 +75,7 @@ public class TransparentProxyController {
 
 
     private Map<String, StringBuffer> ASR_MAP = new ConcurrentHashMap<>();
+    private Map<String, String> DEVICE_IP = new ConcurrentHashMap<>();
 
     @PostMapping("/cs")
     public ResponseEntity<byte[]> proxyRequest(HttpServletRequest request) {
@@ -99,8 +100,11 @@ public class TransparentProxyController {
             String sidWrapper = request.getHeader("P");
             if (deviceId != null) {
                 R1IotUtils.setCurrentDeviceId(deviceId);
-                if(!R1IotUtils.getDeviceMap().containsKey(deviceId)) {
-                    throw new RuntimeException("device not found: "+deviceId);
+
+                String clientIp = request.getRemoteAddr();
+                DEVICE_IP.put(deviceId, clientIp);
+                if (!R1IotUtils.getDeviceMap().containsKey(deviceId)) {
+                    throw new RuntimeException("device not found: " + deviceId);
                 }
                 Matcher matcher = SID_PATTERN.matcher(sidWrapper);
 
@@ -170,33 +174,43 @@ public class TransparentProxyController {
                 log.info("\n==== FROM R1 ====\n {}", jsonNode);
                 // end
                 // 打印远端返回的 body
-                String storeDeviceId = SID_DEVICE_CACHE.get(sid, ()->null);
-                String asrResult = ASR_MAP.get(sid).toString();
-                R1IotUtils.JSON_RET.set(jsonNode);
-                AiAssistant assistant = aiDirect.getAssistants().get(storeDeviceId);
-                String answer = assistant.chat(asrResult);
-                JsonNode fixedJsonNode = R1IotUtils.JSON_RET.get();
-                if (answer != null) {
-                    fixedJsonNode = R1IotUtils.sampleChatResp(answer);
-                }
-
-                String responseString = objectMapper.writeValueAsString(fixedJsonNode);
-                log.info("\n==== FROM AI ====\n {}", responseString);
-
-                // ✅ 构建响应，拷贝所有响应头并重新设置 Content-Length
-                HttpHeaders responseHeaders = new HttpHeaders();
-                for (Header header : proxyResponse.getHeaders()) {
-                    if (!header.getName().equalsIgnoreCase("Content-Length")) {
-                        responseHeaders.add(header.getName(), header.getValue());
+                try {
+                    String storeDeviceId = SID_DEVICE_CACHE.get(sid, () -> null);
+                    String asrResult = ASR_MAP.get(sid).toString();
+                    R1IotUtils.JSON_RET.set(jsonNode);
+                    R1IotUtils.CLIENT_IP.set(DEVICE_IP.get(storeDeviceId));
+                    AiAssistant assistant = aiDirect.getAssistants().get(storeDeviceId);
+                    String answer = assistant.chat(asrResult);
+                    JsonNode fixedJsonNode = R1IotUtils.JSON_RET.get();
+                    if (answer != null) {
+                        fixedJsonNode = R1IotUtils.sampleChatResp(answer);
                     }
-                }
-                byte[] binary = responseString.getBytes(StandardCharsets.UTF_8);
-                responseHeaders.setContentLength(binary.length);
 
-                return ResponseEntity
-                        .status(proxyResponse.getCode())
-                        .headers(responseHeaders)
-                        .body(binary);
+                    String responseString = objectMapper.writeValueAsString(fixedJsonNode);
+                    log.info("\n==== FROM AI ====\n {}", responseString);
+
+                    // ✅ 构建响应，拷贝所有响应头并重新设置 Content-Length
+                    HttpHeaders responseHeaders = new HttpHeaders();
+                    for (Header header : proxyResponse.getHeaders()) {
+                        if (!header.getName().equalsIgnoreCase("Content-Length")) {
+                            responseHeaders.add(header.getName(), header.getValue());
+                        }
+                    }
+                    byte[] binary = responseString.getBytes(StandardCharsets.UTF_8);
+                    responseHeaders.setContentLength(binary.length);
+
+                    return ResponseEntity
+                            .status(proxyResponse.getCode())
+                            .headers(responseHeaders)
+                            .body(binary);
+                } catch (Exception e) {
+                    return ResponseEntity
+                            .status(500)
+                            .body(("Proxy Error: " + e.getMessage()).getBytes());
+                } finally {
+                    R1IotUtils.remove();
+                }
+
             }
 
         } catch (Exception e) {
