@@ -71,7 +71,7 @@ public class AiAssistant {
         ToolExecutionResultMessage toolExecutionResultMessage = ToolExecutionResultMessage.from(toolExecutionRequest, result);
 
         log.info(toolExecutionResultMessage.toString());
-        chatMessages.add(toolExecutionResultMessage);
+//        chatMessages.add(toolExecutionResultMessage);
 
         return null;
 
