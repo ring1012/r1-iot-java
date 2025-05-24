@@ -96,7 +96,7 @@ public class YoutubeMusicImpl implements IMusicService {
             return result;
 
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
 
 
