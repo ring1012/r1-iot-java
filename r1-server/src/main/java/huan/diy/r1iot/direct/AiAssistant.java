@@ -40,7 +40,7 @@ public class AiAssistant {
         List<ToolSpecification> toolSpecifications = ToolSpecifications.toolSpecificationsFrom(boxDecision);
         List<ChatMessage> chatMessages = chatMemory.messages();
         UserMessage userMessage = userMessage(text);
-        chatMessages.add(userMessage);
+        chatMessages.addFirst(userMessage);
 
         List<ChatMessage> reqMessages = new ArrayList<>();
         reqMessages.add(new SystemMessage(systemPrompt + """
