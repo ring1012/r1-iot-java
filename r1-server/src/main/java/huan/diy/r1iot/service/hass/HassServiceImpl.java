@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,6 +93,9 @@ public class HassServiceImpl {
             String entityPrefix = entity.get("entity_id").textValue().split("\\.")[0];
 
             // 获取友好名称
+            if(!Optional.ofNullable(entity.get("attributes")).map(a->a.get("friendly_name")).isPresent()){
+                continue;
+            }
             String friendlyName = entity.get("attributes").get("friendly_name").textValue();
 
             if (StringUtils.hasLength(friendlyName) && WHITE_LIST_PREFIX.contains(entityPrefix)) {
