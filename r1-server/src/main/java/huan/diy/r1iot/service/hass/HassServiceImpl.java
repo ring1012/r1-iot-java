@@ -186,6 +186,9 @@ public class HassServiceImpl {
             url = url.endsWith("/") ? url : (url + "/");
             url = buildOperationUrl(entityId, url, on);
 
+            log.info("action url {}", url);
+            log.info("action entityId {}", entityId);
+
             Map<String, String> entityMap = Map.of("entity_id", entityId);
 
             HttpHeaders headers = new HttpHeaders();
