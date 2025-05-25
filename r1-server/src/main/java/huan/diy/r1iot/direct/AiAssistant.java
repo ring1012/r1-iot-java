@@ -40,15 +40,17 @@ public class AiAssistant {
         List<ToolSpecification> toolSpecifications = ToolSpecifications.toolSpecificationsFrom(boxDecision);
         List<ChatMessage> chatMessages = chatMemory.messages();
         UserMessage userMessage = userMessage(text);
-        chatMessages.addFirst(userMessage);
 
         List<ChatMessage> reqMessages = new ArrayList<>();
+        reqMessages.add(userMessage);
         reqMessages.add(new SystemMessage(systemPrompt + """
                 
                 注意：
                 你是一个中文助手百科全书，用简体中文回答用户的提问！
                 """));
         reqMessages.addAll(chatMessages);
+
+//        reqMessages.addFirst(userMessage);
         ChatRequest chatRequest = ChatRequest.builder()
                 .messages(reqMessages)
                 .parameters(ChatRequestParameters.builder()
@@ -56,7 +58,10 @@ public class AiAssistant {
                         .build())
                 .build();
 
+
         ChatResponse chatResponse = openAiModel.chat(chatRequest);
+        chatMessages.add(userMessage);
+
         AiMessage aiMessage = chatResponse.aiMessage();
 
         List<ToolExecutionRequest> toolExecutionRequests = aiMessage.toolExecutionRequests();
