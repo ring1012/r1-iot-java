@@ -64,7 +64,7 @@ public class NoAuthController {
         return "success";
     }
 
-    @GetMapping("/getUserInfo")
+    @PostMapping("/getUserInfo")
     public Map<String, String> getUserInfo() {
         Map<String, String> map = new HashMap<>();
         map.put("status", "0");
