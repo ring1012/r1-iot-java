@@ -93,7 +93,7 @@ public class HassServiceImpl {
             String entityPrefix = entity.get("entity_id").textValue().split("\\.")[0];
 
             // 获取友好名称
-            if(!Optional.ofNullable(entity.get("attributes")).map(a->a.get("friendly_name")).isPresent()){
+            if(Optional.ofNullable(entity.get("attributes")).map(a->a.get("friendly_name")).isEmpty()){
                 continue;
             }
             String friendlyName = entity.get("attributes").get("friendly_name").textValue();
@@ -219,6 +219,7 @@ public class HassServiceImpl {
     }
 
     private JsonNode stateQuery(String deviceId, String entityId) {
+        log.info("[hass] query: {}", entityId);
         String url = R1IotUtils.getDeviceMap().get(deviceId).getHassConfig().getEndpoint();
         url = url.endsWith("/") ? url : (url + "/") + "api/states/" + entityId;
         Device device = R1IotUtils.getDeviceMap().get(deviceId);
