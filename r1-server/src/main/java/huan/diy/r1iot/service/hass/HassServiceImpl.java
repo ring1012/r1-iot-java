@@ -219,13 +219,14 @@ public class HassServiceImpl {
     }
 
     private JsonNode stateQuery(String deviceId, String entityId) {
-        log.info("[hass] query: {}", entityId);
         String url = R1IotUtils.getDeviceMap().get(deviceId).getHassConfig().getEndpoint();
         url = url.endsWith("/") ? url : (url + "/") + "api/states/" + entityId;
+        log.info("[hass] query: {}", url);
+
         Device device = R1IotUtils.getDeviceMap().get(deviceId);
         Device.HASSConfig hassConfig = device.getHassConfig();
-
         String token = hassConfig.getToken();
+        log.info("[hass] token: {}", token.trim());
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token.trim());
