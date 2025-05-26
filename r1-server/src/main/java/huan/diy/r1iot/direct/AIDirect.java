@@ -122,7 +122,7 @@ public class AIDirect {
         ChatLanguageModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AiAssistant(model, device.getAiConfig().getSystemPrompt(),
                 new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, weatherServiceMap, hassService, boxControllerService, radioService),
-                chatMemory));
+                chatMemory, aiService.isFirstMsg()));
     }
 
 }

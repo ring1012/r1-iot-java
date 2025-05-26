@@ -7,4 +7,6 @@ import huan.diy.r1iot.service.IWebAlias;
 public interface IAIService extends IWebAlias {
 
     ChatLanguageModel buildModel(Device device);
+
+    boolean isFirstMsg();
 }

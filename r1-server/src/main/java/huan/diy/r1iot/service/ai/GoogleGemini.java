@@ -27,6 +27,11 @@ public class GoogleGemini implements IAIService {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public boolean isFirstMsg() {
+        return true;
+    }
+
 
     @Override
     public String getAlias() {

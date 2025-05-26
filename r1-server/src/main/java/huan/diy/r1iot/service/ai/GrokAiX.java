@@ -89,6 +89,11 @@ public class GrokAiX implements IAIService, IWebAlias {
                 .build();
     }
 
+    @Override
+    public boolean isFirstMsg() {
+        return false;
+    }
+
 
     @Override
     public String getAlias() {

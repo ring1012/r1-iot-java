@@ -18,8 +18,13 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import static dev.langchain4j.data.message.UserMessage.userMessage;
@@ -34,7 +39,24 @@ public class AiAssistant {
     private String systemPrompt;
     private BoxDecision boxDecision;
     private ChatMemory chatMemory;
+    private boolean firstMsg;
 
+    public static String now() {
+        // 获取当前日期时间
+        LocalDateTime now = LocalDateTime.now();
+
+        // 定义日期时间格式
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH时mm分ss秒");
+
+        // 格式化日期时间
+        String formattedDateTime = now.format(formatter);
+
+        // 获取星期几
+        DayOfWeek dayOfWeek = now.getDayOfWeek();
+        String weekDay = dayOfWeek.getDisplayName(TextStyle.FULL, Locale.CHINA);
+
+        return "现在是" + formattedDateTime + ", " + weekDay;
+    }
 
     public String chat(String text) {
         List<ToolSpecification> toolSpecifications = ToolSpecifications.toolSpecificationsFrom(boxDecision);
@@ -42,15 +64,19 @@ public class AiAssistant {
         UserMessage userMessage = userMessage(text);
 
         List<ChatMessage> reqMessages = new ArrayList<>();
-        reqMessages.add(userMessage);
-        reqMessages.add(new SystemMessage(systemPrompt + """
-                
+        if (firstMsg) {
+            reqMessages.add(userMessage);
+        }
+        reqMessages.add(new SystemMessage(systemPrompt + "\n" + now() + "\n" + """
+
                 注意：
                 你是一个中文助手百科全书，用简体中文回答用户的提问！
-                """));
+        """));
         reqMessages.addAll(chatMessages);
+        if (!firstMsg) {
+            reqMessages.add(userMessage);
+        }
 
-//        reqMessages.addFirst(userMessage);
         ChatRequest chatRequest = ChatRequest.builder()
                 .messages(reqMessages)
                 .parameters(ChatRequestParameters.builder()

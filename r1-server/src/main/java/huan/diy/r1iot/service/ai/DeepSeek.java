@@ -15,4 +15,8 @@ public class DeepSeek extends GrokAiX {
     public String getAlias() {
         return "DeepSeek";
     }
+
+    public boolean isFirstMsg() {
+        return true;
+    }
 }
