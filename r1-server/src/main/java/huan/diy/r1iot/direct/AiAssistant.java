@@ -94,7 +94,7 @@ public class AiAssistant {
 
         if (CollectionUtils.isEmpty(toolExecutionRequests)) {
             chatMessages.add(aiMessage);
-            return aiMessage.text();
+            return aiMessage.text().replaceAll(R1IotUtils.CHINESE, "").replaceAll("\\*\\*", "");
         }
         var toolExecutionRequest = toolExecutionRequests.get(0);
         ToolExecutor toolExecutor = new DefaultToolExecutor(boxDecision, toolExecutionRequest);

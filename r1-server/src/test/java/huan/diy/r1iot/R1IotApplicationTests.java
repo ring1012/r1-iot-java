@@ -2,6 +2,7 @@ package huan.diy.r1iot;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import huan.diy.r1iot.util.R1IotUtils;
 import org.junit.jupiter.api.Test;
 
 class R1IotApplicationTests {
@@ -13,4 +14,9 @@ class R1IotApplicationTests {
         System.out.println(objectMapper.readTree(str));
     }
 
+    @Test
+    public void chinese(){
+        System.out.println("好的！很高兴跟你聊天。你想聊些什么呢？可以告诉我你的兴趣爱好，或者有什么问题想问？\uD83D\uDE0A"
+                .replaceAll(R1IotUtils.CHINESE, ""));
+    }
 }

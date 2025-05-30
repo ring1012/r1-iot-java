@@ -114,10 +114,10 @@ public class BoxDecision {
             return;
         }
 
-        boolean handle = boxControllerService.control(R1IotUtils.CLIENT_IP.get(), target, action);
-        if (handle) {
-            R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp("执行成功"));
-        }
+//        boolean handle = boxControllerService.control(R1IotUtils.CLIENT_IP.get(), target, action);
+//        if (handle) {
+//            R1IotUtils.JSON_RET.set(R1IotUtils.sampleChatResp("执行成功"));
+//        }
     }
 
     @Tool("""
