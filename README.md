@@ -1,6 +1,5 @@
 ## 如果还是不会
-租我的服务器+AI，限时限量半价中。
-【闲鱼】https://m.tb.cn/h.6iYKmhd?tk=XWNfVYY3Bg7 HU006 「我在闲鱼发布了【复活R1 音箱，功能强大！】」
+【闲鱼】https://m.tb.cn/h.6xNUds6?tk=WqSpVnM3dKv HU287 「我在闲鱼发布了【斐讯R1音箱】」
 点击链接直接打开
 
 ## Usage
