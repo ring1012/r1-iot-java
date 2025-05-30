@@ -58,8 +58,10 @@ public class YoutubeMusicImpl implements IMusicService {
 
             JsonNode resp = restTemplate.postForEntity(MUSIC_SEARCH, req, JsonNode.class).getBody();
             // contents.tabbedSearchResultsRenderer.tabs.tabRenderer.content.sectionListRenderer.contents[0].musicShelfRenderer.contents[].flexColumns[0].musicResponsiveListItemFlexColumnRenderer.text.runs {text, videoId}
-            ArrayNode arrayNode = (ArrayNode) resp.get("contents").get("tabbedSearchResultsRenderer").get("tabs").get(0)
-                    .get("tabRenderer").get("content").get("sectionListRenderer").get("contents").get(1).get("musicShelfRenderer").get("contents");
+            ArrayNode contents = (ArrayNode) resp.get("contents").get("tabbedSearchResultsRenderer").get("tabs").get(0)
+                    .get("tabRenderer").get("content").get("sectionListRenderer").get("contents");
+
+            ArrayNode arrayNode = (ArrayNode)contents.get(contents.size()-1).get("musicShelfRenderer").get("contents");
 
             ArrayNode musicInfo = objectMapper.createArrayNode();
 
