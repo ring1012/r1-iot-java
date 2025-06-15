@@ -5,7 +5,7 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -35,7 +35,7 @@ import static dev.langchain4j.data.message.UserMessage.userMessage;
 @Slf4j
 public class AiAssistant {
 
-    private ChatLanguageModel openAiModel;
+    private ChatModel openAiModel;
     private String systemPrompt;
     private BoxDecision boxDecision;
     private ChatMemory chatMemory;

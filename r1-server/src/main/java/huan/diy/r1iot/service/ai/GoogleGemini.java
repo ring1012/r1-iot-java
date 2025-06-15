@@ -1,7 +1,8 @@
 package huan.diy.r1iot.service.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import huan.diy.r1iot.model.Device;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,18 +14,19 @@ import org.springframework.web.client.RestTemplate;
 @Service("Gemini")
 public class GoogleGemini implements IAIService {
 
-    @Autowired
-    private RestTemplate restTemplate;
+    protected String MODEL;
 
-    @Autowired
-    private ObjectMapper objectMapper = new ObjectMapper();
-
-    private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="; // 替换为实际的 API URL
+    public GoogleGemini() {
+        this.MODEL = "gemini-2.5-flash-preview-05-20";
+    }
 
     @Override
-    public ChatLanguageModel buildModel(Device device) {
-        // todo add langchain gemini dependency
-        throw new UnsupportedOperationException("Not supported yet.");
+    public ChatModel buildModel(Device device) {
+
+        return GoogleAiGeminiChatModel.builder()
+                .apiKey(device.getAiConfig().getKey())
+                .modelName(MODEL)
+                .build();
     }
 
     @Override

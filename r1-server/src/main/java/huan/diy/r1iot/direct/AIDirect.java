@@ -4,7 +4,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.service.ai.IAIService;
@@ -119,7 +119,7 @@ public class AIDirect {
         }
         ChatMemory chatMemory = new GuavaChatMemory(deviceId, 2, TimeUnit.MINUTES, Math.max(4, device.getAiConfig().getChatHistoryNum()));
         IAIService aiService = aiServiceMap.get(device.getAiConfig().getChoice());
-        ChatLanguageModel model = aiService.buildModel(device);
+        ChatModel model = aiService.buildModel(device);
         assistants.put(deviceId, new AiAssistant(model, device.getAiConfig().getSystemPrompt(),
                 new BoxDecision(device, musicServiceMap, newsServiceMap, audioServiceMap, weatherServiceMap, hassService, boxControllerService, radioService),
                 chatMemory, aiService.isFirstMsg()));

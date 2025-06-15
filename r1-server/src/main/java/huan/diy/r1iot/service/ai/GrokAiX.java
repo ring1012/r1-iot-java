@@ -2,8 +2,7 @@ package huan.diy.r1iot.service.ai;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.chat.ChatModel;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.service.IWebAlias;
 import lombok.extern.slf4j.Slf4j;
@@ -80,13 +79,8 @@ public class GrokAiX implements IAIService, IWebAlias {
 //    }
 
     @Override
-    public ChatLanguageModel buildModel(Device device) {
-        return OpenAiChatModel.builder()
-                .baseUrl(BASE_URL)
-                .apiKey(device.getAiConfig().getKey())
-                .modelName(MODEL)
-                .strictTools(false)
-                .build();
+    public ChatModel buildModel(Device device) {
+        return null;
     }
 
     @Override
