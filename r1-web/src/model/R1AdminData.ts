@@ -3,6 +3,8 @@ export interface AIConfig {
     key: string;
     systemPrompt: string;
     chatHistoryNum: number;
+    endpoint?: string;
+    model?: string;
 }
 
 export interface HASSConfig {
@@ -65,4 +67,5 @@ export interface CityLocation {
     cityName: string;
     locationId: string;
 }
+
 

@@ -20,6 +20,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
@@ -42,8 +44,10 @@ public class AiAssistant {
     private boolean firstMsg;
 
     public static String now() {
-        // 获取当前日期时间
-        LocalDateTime now = LocalDateTime.now();
+        ZoneId zoneId = ZoneId.of("Asia/Shanghai");
+
+        // 获取当前东八区时间
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
 
         // 定义日期时间格式
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH时mm分ss秒");

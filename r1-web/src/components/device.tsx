@@ -18,11 +18,13 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 
     const [musicChoice, setMusicChoice] = useState<string | undefined>("");
     const [musicEndpoint, setMusicEndpoint] = useState<string | undefined>("");
+    const [aiChoice, setAiChoice] = useState<string | undefined>("");
 
     useEffect(() => {
         console.log("ini", initValues)
         setMusicChoice(initValues?.musicConfig?.choice)
         setMusicEndpoint(initValues?.musicConfig?.endpoint)
+        setAiChoice(initValues?.aiConfig?.choice)
     }, [initValues]);
 
     const handleMusicSourceChange = (value: string) => {
@@ -31,6 +33,10 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 
     const handleEndpointChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setMusicEndpoint(e.target.value);
+    }
+
+    const handleAiChange = (value: string) => {
+        setAiChoice(value);
     }
 
     return (
@@ -46,21 +52,37 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
             <Collapse defaultActiveKey={["1"]} className="form-input" destroyInactivePanel={false}>
                 <Panel header="AI 配置" key="1" forceRender>
                     <Form.Item name={["aiConfig", "choice"]} label="AI 选择">
-                        <Select className="form-input">
+                        <Select className="form-input" onChange={(value) => handleAiChange(value)}>
                             {r1Resources.aiList.map(item => {
                                 return <Option key={item.serviceName} value={item.serviceName}>{item.aliasName}</Option>
                             })}
                         </Select>
                     </Form.Item>
+
+                    {aiChoice === 'OpenAi' && <>
+
+                        <Form.Item name={["aiConfig", "endpoint"]} label="endpoint(不包含/chat/completions部分)">
+                            <Input className="form-input"/>
+                        </Form.Item>
+
+                        <Form.Item name={["aiConfig", "model"]} label="模型名称">
+                            <Input className="form-input"/>
+                        </Form.Item>
+
+                    </>}
+
                     <Form.Item name={["aiConfig", "key"]} label="AI Key">
                         <Input className="form-input"/>
                     </Form.Item>
                     <Form.Item name={["aiConfig", "systemPrompt"]} label="AI系统提示词">
                         <Input className="form-input" placeholder={"你是一个智能音箱"}/>
                     </Form.Item>
-                    <Form.Item name={["aiConfig", "chatHistoryNum"]} label="AI聊天上下文">
+                    <Form.Item name={["aiConfig", "chatHistoryNum"]} label="AI聊天上下文（失效，会让小讯变傻）">
                         <InputNumber className="form-input"/>
                     </Form.Item>
+
+
+
                 </Panel>
 
                 <Panel header="HASS 配置" key="2" forceRender>
@@ -167,3 +189,4 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 }
 
 export default DeviceForm;
+

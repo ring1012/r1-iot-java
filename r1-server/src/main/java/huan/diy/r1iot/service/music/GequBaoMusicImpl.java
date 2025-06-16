@@ -139,7 +139,7 @@ public class GequBaoMusicImpl implements IMusicService {
             response.setHeader("Content-Disposition", "inline");
             StreamUtils.copy(audioResponse.getBody().getInputStream(), response.getOutputStream());
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -149,3 +149,4 @@ public class GequBaoMusicImpl implements IMusicService {
     }
 
 }
+
