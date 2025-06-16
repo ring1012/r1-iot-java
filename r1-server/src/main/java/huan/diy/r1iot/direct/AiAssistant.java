@@ -76,7 +76,7 @@ public class AiAssistant {
                 注意：
                 你是一个中文助手百科全书，用简体中文回答用户的提问！
         """));
-        reqMessages.addAll(chatMessages);
+//        reqMessages.addAll(chatMessages);
         if (!firstMsg) {
             reqMessages.add(userMessage);
         }
