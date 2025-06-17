@@ -71,10 +71,10 @@ public class AiAssistant {
         if (firstMsg) {
             reqMessages.add(userMessage);
         }
-        reqMessages.add(new SystemMessage(systemPrompt + "\n" + now() + "\n" + """
+        reqMessages.add(new SystemMessage( now() + "\n" + systemPrompt + """
 
                 注意：
-                你是一个中文助手百科全书，用简体中文回答用户的提问！
+                用简体中文回复问题，如果没有工具可选，请直接回答问题。
         """));
 //        reqMessages.addAll(chatMessages);
         if (!firstMsg) {
