@@ -46,7 +46,7 @@ public class GequBaoMusicImpl implements IMusicService {
             .build();
 
 
-    private static final String regex = "window\\.play_id\\s*=\\s*'([^']+)'";
+    private static final String regex = "\"play_id\"\\s*:\\s*\"([^\"]+)\"";
     private static final Pattern pattern = Pattern.compile(regex);
 
     @Override
