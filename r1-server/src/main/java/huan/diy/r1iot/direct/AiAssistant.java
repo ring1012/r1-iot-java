@@ -1,5 +1,6 @@
 package huan.diy.r1iot.direct;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -71,11 +72,11 @@ public class AiAssistant {
         if (firstMsg) {
             reqMessages.add(userMessage);
         }
-        reqMessages.add(new SystemMessage( now() + "\n" + systemPrompt + """
-
-                注意：
-                用简体中文回复问题，如果没有工具可选，请直接回答问题。
-        """));
+        reqMessages.add(new SystemMessage(now() + "\n" + systemPrompt + """
+                
+                        注意：
+                        用简体中文回复问题，如果没有工具可选，请直接回答问题。
+                """));
 //        reqMessages.addAll(chatMessages);
         if (!firstMsg) {
             reqMessages.add(userMessage);
@@ -101,6 +102,7 @@ public class AiAssistant {
             return aiMessage.text().replaceAll(R1IotUtils.CHINESE, "").replaceAll("\\*\\*", "");
         }
         var toolExecutionRequest = toolExecutionRequests.get(0);
+        log.info("ToolExecutionRequest: {}", (toolExecutionRequest.toString()));
         ToolExecutor toolExecutor = new DefaultToolExecutor(boxDecision, toolExecutionRequest);
         String result = toolExecutor.execute(toolExecutionRequest, UUID.randomUUID().toString());
         ToolExecutionResultMessage toolExecutionResultMessage = ToolExecutionResultMessage.from(toolExecutionRequest, result);

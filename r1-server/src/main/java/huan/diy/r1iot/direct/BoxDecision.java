@@ -218,7 +218,8 @@ public class BoxDecision {
             samples: 上海浦东后天什么天气
             AI: locationName=浦东 offsetDay=2
             """)
-    void queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) int offsetDay) {
+    void queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) Integer offsetDay) {
+        offsetDay = offsetDay == null ? 0 : offsetDay;
 
         log.info("Called queryWeather with locationName={}, offsetDay={}", locationName, offsetDay);
 
