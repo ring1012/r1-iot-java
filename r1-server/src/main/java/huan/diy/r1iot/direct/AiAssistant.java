@@ -74,7 +74,7 @@ public class AiAssistant {
         }
         reqMessages.add(new SystemMessage(now() + "\n" + systemPrompt + """
                 
-                        注意：
+                        注意：你可以讲笑话，回答问题，翻译，等等，无所不能。
                         用简体中文回复问题，如果没有工具可选，请直接回答问题。
                 """));
 //        reqMessages.addAll(chatMessages);
