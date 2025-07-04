@@ -56,9 +56,13 @@ public class GequBaoMusicImpl implements IMusicService {
         sb.append(StringUtils.hasLength(musicAiResp.getAuthor()) ? musicAiResp.getAuthor() : "");
         sb.append(" ");
         sb.append(StringUtils.hasLength(musicAiResp.getMusicName()) ? musicAiResp.getMusicName() : "");
+        String keyword = sb.toString().trim();
+        if (keyword.isEmpty()) {
+            keyword = musicAiResp.getKeyword();
+        }
 
         // Construct the URL
-        String url = "https://www.gequbao.com/s/" + sb;
+        String url = "https://www.gequbao.com/s/" + keyword;
 
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
@@ -134,6 +138,7 @@ public class GequBaoMusicImpl implements IMusicService {
     public void streamMusic(String songId, HttpServletResponse response) {
         try {
             String audioUrl = urlCache.get(songId, () -> findPlayUrl(songId));
+            System.out.println(audioUrl);
             ResponseEntity<Resource> audioResponse = restTemplate.getForEntity(audioUrl, Resource.class);
 
             response.setHeader("Content-Disposition", "inline");
