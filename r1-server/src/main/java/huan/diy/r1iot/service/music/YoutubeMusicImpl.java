@@ -9,6 +9,7 @@ import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.Device;
 import huan.diy.r1iot.model.MusicAiResp;
 import huan.diy.r1iot.model.R1GlobalConfig;
+import huan.diy.r1iot.service.YoutubeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ public class YoutubeMusicImpl implements IMusicService {
 
     @Autowired
     private R1GlobalConfig globalConfig;
+
+    @Autowired
+    private YoutubeService youtubeService;
 
     private static final String MUSIC_SEARCH = "https://music.youtube.com/youtubei/v1/search?prettyPrint=false";
 
@@ -64,7 +68,6 @@ public class YoutubeMusicImpl implements IMusicService {
             ArrayNode arrayNode = (ArrayNode)contents.get(contents.size()-1).get("musicShelfRenderer").get("contents");
 
             ArrayNode musicInfo = objectMapper.createArrayNode();
-
             for (JsonNode node : arrayNode) {
                 try {
                     ObjectNode music = objectMapper.createObjectNode();
@@ -75,12 +78,19 @@ public class YoutubeMusicImpl implements IMusicService {
                     music.put("title", data.get("text").asText());
                     music.put("artist", node.get("musicResponsiveListItemRenderer").get("flexColumns").get(1).get("musicResponsiveListItemFlexColumnRenderer")
                             .get("text").get("runs").get(0).get("text").asText());
-                    music.put("url", globalConfig.getHostIp() + "/audio/play/" + id + ".m4a");
+                    music.put("url", (StringUtils.hasLength(globalConfig.getYtdlpEndpoint())
+                            ?globalConfig.getYtdlpEndpoint():globalConfig.getHostIp()) + "/audio/play/" + id + ".m4a");
                     musicInfo.add(music);
                 } catch (Exception e) {
                     log.error(e.getMessage(), e);
                 }
 
+            }
+
+            if(youtubeService.slowArm()){
+                ObjectNode data = (ObjectNode)objectMapper.readTree(objectMapper.writeValueAsString(musicInfo.get(0)));
+                data.put("id", "slow-id");
+                musicInfo.insert(0,data );
             }
 
             ObjectNode result = objectMapper.createObjectNode();

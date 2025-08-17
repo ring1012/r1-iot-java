@@ -88,7 +88,7 @@ const Server: React.FC = () => {
                                         name="ytdlpEndpoint"
                                         rules={[{message: '请输入yt-dlp端点'}]}
                                     >
-                                        <Input placeholder="例如: http://example.com:5000，arm机器执行ty-dlp较慢"/>
+                                        <Input placeholder="例如: http://example.com:8080/youtube，不要/，arm机器执行ty-dlp较慢"/>
                                     </Form.Item>
 
                                     <Form.Item

@@ -2,42 +2,62 @@ FROM eclipse-temurin:17.0.14_7-jdk
 
 WORKDIR /app
 
-# 安装基础工具和ffmpeg
+# 安装基础工具和 ffmpeg、cron
 RUN apt-get update && \
-    apt-get install -y wget ffmpeg ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y wget ffmpeg ca-certificates cron && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 根据系统架构下载对应的 yt-dlp 和 cloudflared 二进制
+# 下载并安装 cloudflared，根据架构（armv7l 跳过）
 RUN ARCH=$(uname -m) && \
-    echo "检测到系统架构: $ARCH" && \
     if [ "$ARCH" = "x86_64" ]; then \
-        # yt-dlp
-        YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"; \
-        # cloudflared
         CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb"; \
+        wget "$CF_URL" -O /tmp/cloudflared.deb && \
+        dpkg -i /tmp/cloudflared.deb || apt-get install -f -y && \
+        rm -f /tmp/cloudflared.deb && cloudflared --version; \
     elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64"; \
         CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb"; \
+        wget "$CF_URL" -O /tmp/cloudflared.deb && \
+        dpkg -i /tmp/cloudflared.deb || apt-get install -f -y && \
+        rm -f /tmp/cloudflared.deb && cloudflared --version; \
+    elif [ "$ARCH" = "armv7l" ]; then \
+        echo "架构 $ARCH 不支持 cloudflared，跳过安装"; \
     else \
         echo "不支持的架构: $ARCH"; exit 1; \
-    fi && \
-    # 下载并安装 yt-dlp
-    echo "下载 yt-dlp URL: $YT_URL" && \
-    wget "$YT_URL" -O /usr/local/bin/yt-dlp && \
-    chmod 755 /usr/local/bin/yt-dlp && \
-    yt-dlp --version && \
-    # 下载并安装 cloudflared
-    echo "下载 cloudflared URL: $CF_URL" && \
-    wget "$CF_URL" -O /tmp/cloudflared.deb && \
-    dpkg -i /tmp/cloudflared.deb || apt-get install -f -y && \
-    rm -f /tmp/cloudflared.deb && \
-    cloudflared --version
+    fi
 
-# 从构建阶段复制 jar 文件
-COPY r1-server/target/r1-server-0.0.1-SNAPSHOT.jar app.jar
-
+# 复制管理脚本（可选）
 COPY r1-server/src/main/resources/scripts/manage_cloudflared.sh /manage_cloudflared.sh
 RUN chmod 755 /manage_cloudflared.sh
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# yt-dlp 安装/更新脚本
+RUN cat << 'EOF' > /usr/local/bin/update_yt_dlp.sh
+#!/bin/bash
+set -e
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+    YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64"
+elif [ "$ARCH" = "armv7l" ]; then
+    YT_URL="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l"
+else
+    echo "不支持的架构: $ARCH"
+    exit 1
+fi
+wget -O /usr/local/bin/yt-dlp "$YT_URL"
+chmod 755 /usr/local/bin/yt-dlp
+yt-dlp --version
+EOF
+RUN chmod +x /usr/local/bin/update_yt_dlp.sh
+RUN /usr/local/bin/update_yt_dlp.sh
+
+# 设置 cron 定时任务每天16点执行 yt-dlp 更新脚本
+RUN echo "0 16 * * * root /usr/local/bin/update_yt_dlp.sh >> /var/log/yt-dlp-update.log 2>&1" > /etc/cron.d/yt-dlp-cron \
+    && chmod 644 /etc/cron.d/yt-dlp-cron \
+    && crontab /etc/cron.d/yt-dlp-cron
+
+# 复制 Java 应用
+COPY r1-server/target/r1-server-0.0.1-SNAPSHOT.jar app.jar
+
+# 启动 cron + Java 应用
+CMD cron && java -jar app.jar

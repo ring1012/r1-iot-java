@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -37,18 +38,25 @@ import java.util.stream.StreamSupport;
 @Slf4j
 public class YoutubeService {
 
-
     @Autowired
-    private R1GlobalConfig r1GlobalConfig;
-
-
+    private R1GlobalConfig globalConfig;
 
     private static String COOKIE_FILE;
+
+    private static boolean IS_ARM;
 
     static {
         String homeDir = System.getProperty("user.home");
         Path cookiePath = Paths.get(homeDir, ".r1-iot", "youtube.txt");
         COOKIE_FILE = Files.exists(cookiePath) ? cookiePath.toAbsolutePath().toString() : null;
+
+        String arch = System.getProperty("os.arch");
+
+        if (arch.contains("arm") || arch.contains("aarch64")) {
+            IS_ARM = true;
+        } else {
+            IS_ARM = false;
+        }
     }
 
 
@@ -57,6 +65,10 @@ public class YoutubeService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    public boolean slowArm(){
+        return !StringUtils.hasLength(globalConfig.getYtdlpEndpoint()) && IS_ARM;
+    }
 
     // 使用Guava Cache构建缓存，30分钟过期
     private static final Cache<String, String> urlCache = CacheBuilder.newBuilder()
@@ -133,12 +145,17 @@ public class YoutubeService {
                             .asText().replaceAll(R1IotUtils.CHINESE, ""));
 
 
-                    music.put("url", r1GlobalConfig.getHostIp() + "/audio/play/" + id + ".m4a");
+                    music.put("url", (StringUtils.hasLength(globalConfig.getYtdlpEndpoint())
+                            ?globalConfig.getYtdlpEndpoint():globalConfig.getHostIp())  + "/audio/play/" + id + ".m4a");
 
                     musicInfo.add(music);
                 });
 
-
+        if(this.slowArm()){
+            ObjectNode data = (ObjectNode)objectMapper.readTree(objectMapper.writeValueAsString(musicInfo.get(0)));
+            data.put("id", "slow-id");
+            musicInfo.insert(0,data );
+        }
         ObjectNode result = objectMapper.createObjectNode();
 
         ObjectNode ret = objectMapper.createObjectNode();
@@ -168,7 +185,7 @@ public class YoutubeService {
         proxyAudioRequest(audioUrl, rangeHeader, response);
     }
 
-    private String getCachedAudioUrl(String videoId) {
+    public String getCachedAudioUrl(String videoId) {
         try {
             // 尝试从缓存获取，如果不存在则调用load方法获取
             return urlCache.get(videoId, () -> fetchAudioUrlWithYtDlp(videoId));
@@ -180,8 +197,8 @@ public class YoutubeService {
 
     private String fetchAudioUrlWithYtDlp(String videoId) throws IOException, InterruptedException {
 
-        String remoteYtDlp = r1GlobalConfig.getYtdlpEndpoint();
-        if (remoteYtDlp != null) {
+        String remoteYtDlp = globalConfig.getYtdlpEndpoint();
+        if (StringUtils.hasLength(remoteYtDlp)) {
             // arm 运行 ytDlp太慢，找一台amd服务器转发一下。
             return fetchFromRemote(remoteYtDlp, videoId);
         }
@@ -241,7 +258,7 @@ public class YoutubeService {
             sb.append("http://");
         }
         sb.append(remoteYtDlp);
-        sb.append("?vId=");
+        sb.append("get_youtube_url?vId=");
         sb.append(vId);
 
 
