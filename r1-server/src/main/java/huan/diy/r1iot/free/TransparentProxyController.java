@@ -151,8 +151,8 @@ public class TransparentProxyController {
                         // init
                         ASR_MAP.put(sid, new StringBuffer());
                     } else {
-                        ASR_MAP.get(sid).append(jsonNode.get("asr_recongize").asText());
-                    }
+                        ASR_MAP.computeIfAbsent(sid, k -> new StringBuffer())
+                                .append(jsonNode.get("asr_recongize").asText());                    }
 
                 }
 

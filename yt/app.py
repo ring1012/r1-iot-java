@@ -124,6 +124,45 @@ def play_audio(vId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
+
+@app.route('/v1beta', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@app.route('/v1beta/<path:path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def proxy(path):
+    # 构造目标 URL
+    target_url = f"{TARGET_BASE}/{path}"
+
+    # 保留 query string
+    if request.query_string:
+        target_url += '?' + request.query_string.decode()
+
+    # 复制 headers，但去掉 Host、X-Forwarded-For 等敏感头
+    headers = {}
+    for k, v in request.headers.items():
+        if k.lower() not in ['host', 'x-forwarded-for', 'x-real-ip', 'content-length']:
+            headers[k] = v
+
+    # 发起请求
+    resp = requests.request(
+        method=request.method,
+        url=target_url,
+        headers=headers,
+        data=request.get_data(),
+        cookies=request.cookies,
+        allow_redirects=False,
+        stream=True
+    )
+
+    # 构造 Flask Response
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                        if name.lower() not in excluded_headers]
+
+    return Response(resp.content, resp.status_code, response_headers)
+
+
 # app.config['UPLOAD_FOLDER'] = '/var/data'
 #
 # # 确保上传目录存在
