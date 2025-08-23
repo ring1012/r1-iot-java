@@ -4,6 +4,7 @@ import time
 import requests
 import subprocess
 import os
+from urllib.parse import quote_plus
 
 app = Flask(__name__)
 
@@ -124,7 +125,7 @@ def play_audio(vId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
+# gemini
 TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
@@ -161,6 +162,66 @@ def proxy(path):
                         if name.lower() not in excluded_headers]
 
     return Response(resp.content, resp.status_code, response_headers)
+
+
+# audio youtube
+YOUTUBE_BASE = "https://www.youtube.com/results"
+
+@app.route('/youtube/search/audio', methods=['GET'])
+def youtube_search_proxy():
+    keyword = request.args.get('keyword', '')
+    suffix = request.args.get('suffix', '')  # 如果你想加后缀
+    search_query = f"{keyword} {suffix}".strip()
+
+    # 构造 URL
+    url = f"{YOUTUBE_BASE}?search_query={quote_plus(search_query)}"
+
+    # 构造 headers
+    headers = {
+        "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        # 你可以加更多 header，例如 User-Agent
+        "User-Agent": request.headers.get("User-Agent", "Mozilla/5.0")
+    }
+
+    # 发起请求
+    resp = requests.get(url, headers=headers, stream=True)
+
+    # 过滤部分 header 避免冲突
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_headers]
+
+    # 返回响应
+    return Response(resp.content, status=resp.status_code, headers=response_headers)
+
+# music youtube
+MUSIC_SEARCH_URL = "https://music.youtube.com/youtubei/v1/search?prettyPrint=false"
+
+# 原始请求 payload 模板
+SAMPLE_PAYLOAD = """{"context":{"client":{"hl":"en","gl":"SG","remoteHost":"202.6.40.167","deviceMake":"Apple","deviceModel":"","visitorData":"Cgs4QXVOYVV4OUp0TSj28rfABjIKCgJDThIEGgAgSA%3D%3D","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36,gzip(gfe)","clientName":"WEB_REMIX","clientVersion":"1.20250423.01.00","osName":"Macintosh","osVersion":"10_15_7","originalUrl":"https://music.youtube.com/search?q=%E5%91%A8%E6%9D%B0%E4%BC%A6","platform":"DESKTOP","clientFormFactor":"UNKNOWN_FORM_FACTOR"}},"query":"__KEYWORD__","params":"EgWKAQIIAWoSEAMQBBAJEA4QChAFEBEQEBAV"}"""
+
+
+@app.route("/youtube/search/music", methods=["GET"])
+def youtube_music_proxy():
+    keyword = request.args.get("keyword", "").strip()
+    if not keyword:
+        return {"error": "keyword is required"}, 400
+
+    # 替换 SAMPLE_PAYLOAD 中的 query 字段
+    payload = SAMPLE_PAYLOAD.replace("__KEYWORD__", keyword)
+
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": request.headers.get("User-Agent", "Mozilla/5.0")
+    }
+
+    resp = requests.post(MUSIC_SEARCH_URL, headers=headers, data=payload)
+
+    # 直接把响应透传给客户端
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_headers]
+
+    return Response(resp.content, status=resp.status_code, headers=response_headers)
+
 
 
 # app.config['UPLOAD_FOLDER'] = '/var/data'

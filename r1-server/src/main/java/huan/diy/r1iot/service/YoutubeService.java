@@ -77,24 +77,34 @@ public class YoutubeService {
             .build();
 
     public ObjectNode search(String keyword, String suffix) throws Exception {
-        String searchQuery = (keyword + " " + suffix).trim();
-        // add header
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("accept-language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7");
-        HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response;
+        if(StringUtils.hasLength(globalConfig.getYtdlpEndpoint())){
+            String baseUrl = globalConfig.getYtdlpEndpoint().endsWith("/")?globalConfig.getYtdlpEndpoint():(globalConfig.getYtdlpEndpoint()+"/");
+            response = restTemplate.getForEntity(
+                    baseUrl+"search/music?keyword="+keyword+"&suffix="+suffix,
+                    String.class
+            );
+        }else{
+            String searchQuery = (keyword + " " + suffix).trim();
+            // add header
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("accept-language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7");
+            HttpEntity<String> requestEntity = new HttpEntity<>(headers);
 
-        // Updated to use fromUriString instead of fromHttpUrl
-        String url = UriComponentsBuilder.fromUriString("https://www.youtube.com/results")
-                .queryParam("search_query", searchQuery)
-                .build()
-                .toUriString();
+            // Updated to use fromUriString instead of fromHttpUrl
+            String url = UriComponentsBuilder.fromUriString("https://www.youtube.com/results")
+                    .queryParam("search_query", searchQuery)
+                    .build()
+                    .toUriString();
 
-        ResponseEntity<String> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                requestEntity,
-                String.class
-        );
+            response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    requestEntity,
+                    String.class
+            );
+        }
+
         String html = response.getBody();
 
         // 从HTML中提取JSON数据
