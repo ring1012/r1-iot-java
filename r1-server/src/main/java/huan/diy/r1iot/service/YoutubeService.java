@@ -81,7 +81,7 @@ public class YoutubeService {
         if(StringUtils.hasLength(globalConfig.getYtdlpEndpoint())){
             String baseUrl = globalConfig.getYtdlpEndpoint().endsWith("/")?globalConfig.getYtdlpEndpoint():(globalConfig.getYtdlpEndpoint()+"/");
             response = restTemplate.getForEntity(
-                    baseUrl+"search/music?keyword="+keyword+"&suffix="+suffix,
+                    baseUrl+"search/audio?keyword="+keyword+"&suffix="+suffix,
                     String.class
             );
         }else{
