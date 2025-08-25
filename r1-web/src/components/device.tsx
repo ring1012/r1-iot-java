@@ -71,18 +71,6 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 
                     </>}
 
-                    {aiChoice === 'OpenAi' && <>
-
-                        <Form.Item name={["aiConfig", "endpoint"]} label="endpoint(不包含/chat/completions部分)">
-                            <Input className="form-input"/>
-                        </Form.Item>
-
-                        <Form.Item name={["aiConfig", "model"]} label="模型名称">
-                            <Input className="form-input"/>
-                        </Form.Item>
-
-                    </>}
-
                     <Form.Item name={["aiConfig", "key"]} label="AI Key">
                         <Input className="form-input"/>
                     </Form.Item>

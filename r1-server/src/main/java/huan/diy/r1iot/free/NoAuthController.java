@@ -55,13 +55,13 @@ public class NoAuthController {
 
 
     @GetMapping("/test")
-    public String test(@RequestParam String deviceId) {
-
-        String resp = aidirect.getAssistants().get(deviceId).chat("我想听周杰伦的歌");
+    public String test(@RequestParam String deviceId, @RequestParam String text) {
+        long start = System.currentTimeMillis();
+        String resp = aidirect.getAssistants().get(deviceId).chat(text);
 
         System.out.println(resp);
-
-        return "success";
+        System.out.println(System.currentTimeMillis() - start);
+        return resp;
     }
 
     @PostMapping("/getUserInfo")

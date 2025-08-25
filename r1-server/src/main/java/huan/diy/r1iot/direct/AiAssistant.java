@@ -8,8 +8,8 @@ import dev.langchain4j.data.message.*;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.openai.OpenAiChatRequestParameters;
 import dev.langchain4j.service.tool.DefaultToolExecutor;
 import dev.langchain4j.service.tool.ToolExecutor;
 import huan.diy.r1iot.util.R1IotUtils;
@@ -20,15 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 import static dev.langchain4j.data.message.UserMessage.userMessage;
 
@@ -64,6 +60,7 @@ public class AiAssistant {
     }
 
     public String chat(String text) {
+
         List<ToolSpecification> toolSpecifications = ToolSpecifications.toolSpecificationsFrom(boxDecision);
         List<ChatMessage> chatMessages = chatMemory.messages();
         UserMessage userMessage = userMessage(text);
@@ -82,13 +79,21 @@ public class AiAssistant {
             reqMessages.add(userMessage);
         }
 
+        Map<String, Object> custom = new HashMap<>();
+        String aiEndpoint = this.boxDecision.getDevice().getAiConfig().getEndpoint();
+        if (aiEndpoint.toLowerCase().contains("bigmodel")) {
+            Map<String, Object> thinking = new HashMap<>();
+            thinking.put("type", "disabled");
+            custom.put("thinking", thinking);
+        }
+
         ChatRequest chatRequest = ChatRequest.builder()
                 .messages(reqMessages)
-                .parameters(ChatRequestParameters.builder()
+                .parameters(OpenAiChatRequestParameters.builder()
                         .toolSpecifications(toolSpecifications)
+                        .customParameters(custom)
                         .build())
                 .build();
-
 
         ChatResponse chatResponse = openAiModel.chat(chatRequest);
         chatMessages.add(userMessage);
