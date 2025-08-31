@@ -80,7 +80,7 @@ public class AiAssistant {
         }
 
         Map<String, Object> custom = new HashMap<>();
-        String aiEndpoint = this.boxDecision.getDevice().getAiConfig().getEndpoint();
+        String aiEndpoint = Optional.ofNullable(this.boxDecision.getDevice().getAiConfig().getEndpoint()).orElse("");
         if (aiEndpoint.toLowerCase().contains("bigmodel")) {
             Map<String, Object> thinking = new HashMap<>();
             thinking.put("type", "disabled");

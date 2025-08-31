@@ -204,6 +204,7 @@ public class TransparentProxyController {
                             .headers(responseHeaders)
                             .body(binary);
                 } catch (Exception e) {
+                    e.printStackTrace();
                     return ResponseEntity
                             .status(500)
                             .body(("Proxy Error: " + e.getMessage()).getBytes());
