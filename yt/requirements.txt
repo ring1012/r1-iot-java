@@ -1,3 +1,4 @@
 requests
 yt-dlp
 flask
+cachetools
