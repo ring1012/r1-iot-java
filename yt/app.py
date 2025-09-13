@@ -5,15 +5,25 @@ import requests
 import subprocess
 import os
 from urllib.parse import quote_plus
+from cachetools import TTLCache
+from threading import Lock
+from functools import lru_cache
+
 
 app = Flask(__name__)
 
-# 简单内存缓存 {vId: {"url": xxx, "ts": 时间戳}}
-cache = {}
-CACHE_TTL = 60 * 30  # 缓存有效期 30 分钟
+
+CACHE_TTL = 3600
+cache = TTLCache(maxsize=1000, ttl=CACHE_TTL)
+
+@lru_cache(maxsize=None)
+def _lock_for(vId: str) -> Lock:
+    # lru_cache 自带全局锁，线程安全地返回“每个 key 的同一把锁”
+    return Lock()
+
 cookies = {}  # 全局 cookie 缓存
 
-def load_cookies(cookie_file="/root/youtube.txt"):
+def load_cookies(cookie_file="/home/container/youtube.txt"):
     """
     读取 youtube.txt (Netscape 格式) 的 cookie 并缓存
     """
@@ -35,21 +45,10 @@ def load_cookies(cookie_file="/root/youtube.txt"):
     except Exception as e:
         print(f"[ERROR] 读取 cookie 文件失败: {e}")
 
-def fetch_youtube_url(vId: str):
-    """
-    获取或更新指定视频ID的音频URL
-    """
-    now = time.time()
-    if vId in cache:
-        entry = cache[vId]
-        if now - entry["ts"] < CACHE_TTL:
-            return entry["url"], True
-        else:
-            del cache[vId]  # 过期删除
-
+def _load_youtube_url(vId: str):
     ydl_opts = {
         'format': '140',  # Audio only (m4a)
-        'cookiefile': '/root/youtube.txt',
+        'cookiefile': '/home/container/youtube.txt',
         'force_ipv4': True,
         'quiet': True,
         'no_warnings': True,
@@ -71,10 +70,33 @@ def fetch_youtube_url(vId: str):
                     break
 
         if url:
-            cache[vId] = {"url": url, "ts": now}
-            return url, False
+            print(f"缓存: {vId}")
+            return url
         else:
             raise ValueError("URL not found in response")
+        
+def fetch_youtube_url(vId: str):
+   
+    # 1) 无锁快读
+    url = cache.get(vId)
+    if url is not None:
+        print(f"使用缓存: {vId}")
+        return url, True
+
+    # 2) 单航班：同一 vId 共享同一把锁
+    lock = _lock_for(vId)
+    with lock:
+        # 3) 双检
+        url = cache.get(vId)
+        if url is not None:
+            print(f"使用缓存: {vId}")
+            return url, True
+
+        # 4) 真抓一次并写入
+        url = _load_youtube_url(vId)
+        cache[vId] = url
+        return url, False
+    
 
 @app.route('/youtube/get_youtube_url', methods=['GET'])
 def get_youtube_url():
@@ -99,32 +121,59 @@ def get_youtube_url():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/youtube/audio/play/<vId>.m4a', methods=['GET'])
+
+@app.route('/youtube/audio/play/<vId>.m4a', methods=['GET', 'HEAD'])
 def play_audio(vId):
-    """
-    获取音频URL并代理返回m4a内容
-    """
     try:
-        url, _ = fetch_youtube_url(vId)
-        headers = {'User-Agent': 'Mozilla/5.0'}
+        url, _ = fetch_youtube_url(vId)  # 你的实现，返回直链
 
-        r = requests.get(url, stream=True, headers=headers, cookies=cookies, timeout=60)
-        print(f"[INFO] 请求YouTube音频，状态码: {r.status_code}")
+        # 基本 headers，透传客户端的 Range（如果有）
+        upstream_headers = {'User-Agent': 'Mozilla/5.0'}
+        client_range = request.headers.get('Range')
+        print(client_range)
+        if client_range:
+            upstream_headers['Range'] = client_range
 
-        if r.status_code != 200:
-            return jsonify({'error': f'YouTube返回状态码 {r.status_code}'}), 502
+        # 向上游请求（stream=True 保证按需读取）
+        r = requests.get(url, stream=True, headers=upstream_headers, cookies=cookies, timeout=60)
 
+        if r.status_code not in (200, 206):
+            return jsonify({'error': f'YouTube 返回状态码 {r.status_code}'}), 502
+
+        # 如果是 HEAD 请求，只返回头部
+        if request.method == 'HEAD':
+            resp = Response(status=r.status_code)
+            # 复制上游重要头
+            for h in ('Content-Type', 'Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified'):
+                if h in r.headers:
+                    resp.headers[h] = r.headers[h]
+            resp.headers['Access-Control-Allow-Origin'] = '*'
+            return resp
+
+        # 流式把上游内容推给客户端
         def generate():
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    yield chunk
+            try:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+            finally:
+                r.close()
 
-        resp = Response(stream_with_context(generate()), content_type="audio/mp4")
+        resp = Response(stream_with_context(generate()), status=r.status_code)
+        # 复制必要的头（不要 blindly 复制 Transfer-Encoding）
+        if 'Content-Type' in r.headers:
+            resp.headers['Content-Type'] = r.headers['Content-Type']
+        for h in ('Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag', 'Last-Modified'):
+            if h in r.headers:
+                resp.headers[h] = r.headers[h]
+
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    
 # gemini
 TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -195,6 +244,8 @@ def youtube_search_proxy():
 
 # music youtube
 MUSIC_SEARCH_URL = "https://music.youtube.com/youtubei/v1/search?prettyPrint=false"
+
+
 
 # 原始请求 payload 模板
 SAMPLE_PAYLOAD = """{"context":{"client":{"hl":"en","gl":"SG","remoteHost":"202.6.40.167","deviceMake":"Apple","deviceModel":"","visitorData":"Cgs4QXVOYVV4OUp0TSj28rfABjIKCgJDThIEGgAgSA%3D%3D","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36,gzip(gfe)","clientName":"WEB_REMIX","clientVersion":"1.20250423.01.00","osName":"Macintosh","osVersion":"10_15_7","originalUrl":"https://music.youtube.com/search?q=%E5%91%A8%E6%9D%B0%E4%BC%A6","platform":"DESKTOP","clientFormFactor":"UNKNOWN_FORM_FACTOR"}},"query":"__KEYWORD__","params":"EgWKAQIIAWoSEAMQBBAJEA4QChAFEBEQEBAV"}"""
