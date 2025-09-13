@@ -297,6 +297,9 @@ public class YoutubeService {
 
             if (rangeHeader != null) {
                 requestBuilder.header("Range", rangeHeader);
+            }else {
+                // 默认补 1MB
+                requestBuilder.header("Range", "bytes=0-1048575");
             }
 
             // 2. 发送请求并获取响应
