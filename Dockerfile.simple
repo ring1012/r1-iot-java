@@ -60,4 +60,4 @@ RUN echo "0 16 * * * root /usr/local/bin/update_yt_dlp.sh >> /var/log/yt-dlp-upd
 COPY r1-server/target/r1-server-0.0.1-SNAPSHOT.jar app.jar
 
 # 启动 cron + Java 应用
-CMD cron && java -Djava.net.preferIPv6Addresses=true -jar app.jar
+CMD cron && java -jar app.jar
