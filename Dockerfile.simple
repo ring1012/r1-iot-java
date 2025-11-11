@@ -44,9 +44,15 @@ else
     echo "不支持的架构: $ARCH"
     exit 1
 fi
-wget -O /usr/local/bin/yt-dlp "$YT_URL"
-chmod 755 /usr/local/bin/yt-dlp
-yt-dlp --version
+
+echo "[INFO] 下载 yt-dlp: $YT_URL"
+if wget -q -O /usr/local/bin/yt-dlp "$YT_URL"; then
+    chmod 755 /usr/local/bin/yt-dlp
+    /usr/local/bin/yt-dlp --version || true
+else
+    echo "[WARN] yt-dlp 下载失败，跳过安装"
+fi
+
 EOF
 RUN chmod +x /usr/local/bin/update_yt_dlp.sh
 RUN /usr/local/bin/update_yt_dlp.sh
@@ -55,6 +61,10 @@ RUN /usr/local/bin/update_yt_dlp.sh
 RUN echo "0 16 * * * root /usr/local/bin/update_yt_dlp.sh >> /var/log/yt-dlp-update.log 2>&1" > /etc/cron.d/yt-dlp-cron \
     && chmod 644 /etc/cron.d/yt-dlp-cron \
     && crontab /etc/cron.d/yt-dlp-cron
+
+# 安装deno
+curl -fsSL https://deno.land/install.sh | sh
+
 
 # 复制 Java 应用
 COPY r1-server/target/r1-server-0.0.1-SNAPSHOT.jar app.jar
