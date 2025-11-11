@@ -15,6 +15,7 @@ app = Flask(__name__)
 
 CACHE_TTL = 3600
 cache = TTLCache(maxsize=1000, ttl=CACHE_TTL)
+deno_path='home/container/deno'
 
 @lru_cache(maxsize=None)
 def _lock_for(vId: str) -> Lock:
@@ -53,6 +54,7 @@ def _load_youtube_url(vId: str):
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
+        'js_runtimes': f'deno:{deno_path}'
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
