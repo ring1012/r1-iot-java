@@ -4,7 +4,7 @@ import time
 import requests
 import subprocess
 import os
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, parse_qsl, urlencode
 from cachetools import TTLCache
 from threading import Lock
 from functools import lru_cache
@@ -179,16 +179,68 @@ def play_audio(vId):
 # gemini
 TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
+# cache by query
+CACHE_SVC = "https://yt.hutang.cloudns.be/gemini/v1beta"
 
 @app.route('/v1beta', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 @app.route('/v1beta/<path:path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def proxy(path):
     # 构造目标 URL
+    target_url = f"{CACHE_SVC}/{path}"
+    input = request.json
+    # find $.contents[role = 'user'].parts[0].text
+    userInput = None
+    for c in input.get('contents', []):
+        if c.get('role') == 'user' and c.get('parts') and 'text' in c['parts'][0]:
+            userInput = c['parts'][0]['text']
+            if '现在' in userInput:
+                userInput = None
+            break
+
+    if request.query_string:
+        target_url += '?' + request.query_string.decode() + f"&userInput={quote_plus(userInput or '')}"
+    else:
+        target_url += f"?userInput={quote_plus(userInput or '')}"
+
+    # 复制 headers，但去掉 Host、X-Forwarded-For 等敏感头
+    headers = {}
+    for k, v in request.headers.items():
+        if k.lower() not in ['host', 'x-forwarded-for', 'x-real-ip', 'content-length']:
+            headers[k] = v
+
+    # 发起请求
+    resp = requests.request(
+        method=request.method,
+        url=target_url,
+        headers=headers,
+        data=request.get_data(),
+        cookies=request.cookies,
+        allow_redirects=False,
+        stream=True
+    )
+
+    # 构造 Flask Response
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                        if name.lower() not in excluded_headers]
+
+    return Response(resp.content, resp.status_code, response_headers)
+
+
+@app.route('/gemini/v1beta', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@app.route('/gemini/v1beta/<path:path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def gemni(path):
+    # 构造目标 URL
     target_url = f"{TARGET_BASE}/{path}"
 
     # 保留 query string
+
     if request.query_string:
-        target_url += '?' + request.query_string.decode()
+        qs = request.query_string.decode()
+        params = [(k, v) for k, v in parse_qsl(qs) if k != 'userInput']
+        filtered_qs = urlencode(params)
+        if filtered_qs:
+            target_url += '?' + filtered_qs
 
     # 复制 headers，但去掉 Host、X-Forwarded-For 等敏感头
     headers = {}
