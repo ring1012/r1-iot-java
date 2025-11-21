@@ -8,6 +8,7 @@ from urllib.parse import quote_plus, parse_qsl, urlencode
 from cachetools import TTLCache
 from threading import Lock
 from functools import lru_cache
+import hashlib
 
 
 app = Flask(__name__)
@@ -15,6 +16,8 @@ app = Flask(__name__)
 
 CACHE_TTL = 3600
 cache = TTLCache(maxsize=1000, ttl=CACHE_TTL)
+POST_CACHE = TTLCache(maxsize=1000, ttl=1)
+
 deno_path='home/container/deno'
 
 @lru_cache(maxsize=None)
@@ -54,7 +57,7 @@ def _load_youtube_url(vId: str):
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
-        'js_runtimes': f'deno:{deno_path}'
+        'js_runtimes': {'deno': {'executable': '/home/container/deno'}}
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -182,90 +185,75 @@ TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
 # cache by query
 CACHE_SVC = "https://yt.hutang.cloudns.be/gemini/v1beta"
 
-@app.route('/v1beta', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-@app.route('/v1beta/<path:path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-def proxy(path):
-    # 构造目标 URL
-    target_url = f"{CACHE_SVC}/{path}"
-    input = request.json
-    # find $.contents[role = 'user'].parts[0].text
-    userInput = None
-    for c in input.get('contents', []):
-        if c.get('role') == 'user' and c.get('parts') and 'text' in c['parts'][0]:
-            userInput = c['parts'][0]['text']
-            if '现在' in userInput:
-                userInput = None
-            break
 
-    if request.query_string:
-        target_url += '?' + request.query_string.decode() + f"&userInput={quote_plus(userInput or '')}"
-    else:
-        target_url += f"?userInput={quote_plus(userInput or '')}"
-
-    # 复制 headers，但去掉 Host、X-Forwarded-For 等敏感头
-    headers = {}
-    for k, v in request.headers.items():
-        if k.lower() not in ['host', 'x-forwarded-for', 'x-real-ip', 'content-length']:
-            headers[k] = v
-
-    # 发起请求
-    resp = requests.request(
-        method=request.method,
-        url=target_url,
-        headers=headers,
-        data=request.get_data(),
-        cookies=request.cookies,
-        allow_redirects=False,
-        stream=True
-    )
-
-    # 构造 Flask Response
-    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
-    response_headers = [(name, value) for name, value in resp.raw.headers.items()
-                        if name.lower() not in excluded_headers]
-
-    return Response(resp.content, resp.status_code, response_headers)
-
-
-@app.route('/gemini/v1beta', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-@app.route('/gemini/v1beta/<path:path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-def gemni(path):
-    # 构造目标 URL
+def call_google_api(path, query, body, headers):
     target_url = f"{TARGET_BASE}/{path}"
+    if query:
+        target_url += "?" + urlencode(query)
+    resp = requests.post(target_url, headers=headers, json=body, timeout=60)
+    return resp
 
-    # 保留 query string
+@app.route('/v1beta', defaults={'path': ''}, methods=['POST'])
+@app.route('/v1beta/<path:path>', methods=['POST'])
+def proxy_v1beta(path):
+    incoming_body = request.json or {}
+    incoming_query = dict(request.args)
 
-    if request.query_string:
-        qs = request.query_string.decode()
-        params = [(k, v) for k, v in parse_qsl(qs) if k != 'userInput']
-        filtered_qs = urlencode(params)
-        if filtered_qs:
-            target_url += '?' + filtered_qs
+    userInput = None
+    for c in incoming_body.get('contents', []):
+        if c.get('role') == 'user' and c.get('parts'):
+            text = c['parts'][0].get('text')
+            if text:
+                userInput = text
+                break
 
-    # 复制 headers，但去掉 Host、X-Forwarded-For 等敏感头
-    headers = {}
-    for k, v in request.headers.items():
-        if k.lower() not in ['host', 'x-forwarded-for', 'x-real-ip', 'content-length']:
-            headers[k] = v
+    google_headers = {
+        k: v for k, v in request.headers.items() if k.lower() not in ['host', 'content-length']
+    }
 
-    # 发起请求
-    resp = requests.request(
-        method=request.method,
-        url=target_url,
-        headers=headers,
-        data=request.get_data(),
-        cookies=request.cookies,
-        allow_redirects=False,
-        stream=True
-    )
+    if userInput and "现在" in userInput:
+        print("命中关键词：现在 → 不缓存，直接请求 Google API")
+        resp = call_google_api(path, incoming_query, incoming_body, google_headers)
+        excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+        response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                            if name.lower() not in excluded_headers]
 
-    # 构造 Flask Response
+        return Response(resp.content, resp.status_code, response_headers)
+
+    key = hashlib.md5((userInput or "").encode()).hexdigest()
+
+    POST_CACHE[key] = {
+        "body": incoming_body,
+        "query": incoming_query,
+        "headers": google_headers
+    }
+
+    gemini_url = f"{CACHE_SVC}/{path}?userInput={key}"
+    resp = requests.get(gemini_url, timeout=60)
     excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
     response_headers = [(name, value) for name, value in resp.raw.headers.items()
                         if name.lower() not in excluded_headers]
 
     return Response(resp.content, resp.status_code, response_headers)
 
+@app.route('/gemini/v1beta', defaults={'path': ''}, methods=['GET'])
+@app.route('/gemini/v1beta/<path:path>', methods=['GET'])
+def proxy_gemini(path):
+    key = request.args.get("userInput")
+    data = POST_CACHE.get(key)
+    if not data:
+        return {"error": "token expired"}, 410
+
+    original_body = data["body"]
+    original_query = data["query"]
+    cached_headers = data.get("headers", {})
+
+    resp = call_google_api(path, original_query, original_body, cached_headers)
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                        if name.lower() not in excluded_headers]
+
+    return Response(resp.content, resp.status_code, response_headers)
 
 # audio youtube
 YOUTUBE_BASE = "https://www.youtube.com/results"
