@@ -28,6 +28,7 @@ public class Device {
         private int chatHistoryNum;
         private String model;
         private String endpoint;
+        private String cdn;
     }
 
     // Static inner class for HASSConfig

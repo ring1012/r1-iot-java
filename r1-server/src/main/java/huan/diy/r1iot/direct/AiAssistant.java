@@ -18,6 +18,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.time.DayOfWeek;
 import java.time.ZoneId;
@@ -86,7 +87,9 @@ public class AiAssistant {
             thinking.put("type", "disabled");
             custom.put("thinking", thinking);
         }
-
+        if(StringUtils.hasLength(this.boxDecision.getDevice().getAiConfig().getCdn())){
+            custom.put("real", this.boxDecision.getDevice().getAiConfig().getEndpoint());
+        }
         ChatRequest chatRequest = ChatRequest.builder()
                 .messages(reqMessages)
                 .parameters(OpenAiChatRequestParameters.builder()

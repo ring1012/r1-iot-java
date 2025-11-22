@@ -5,6 +5,7 @@ export interface AIConfig {
     chatHistoryNum: number;
     endpoint?: string;
     model?: string;
+    cdn?: string;
 }
 
 export interface HASSConfig {

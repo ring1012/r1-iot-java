@@ -61,7 +61,11 @@ const DeviceForm: React.FC<DeviceFormProps> = ({handleSaveDevice, initValues, r1
 
                     {(aiChoice === 'OpenAi' || aiChoice === 'Gemini' ) && <>
 
-                        <Form.Item name={["aiConfig", "endpoint"]} label="endpoint(不包含/chat/completions部分)">
+                        <Form.Item name={["aiConfig", "endpoint"]} label="ai host+path(不包含/chat/completions或/v1beta)">
+                            <Input className="form-input"/>
+                        </Form.Item>
+
+                        <Form.Item name={["aiConfig", "cdn"]} label="cdn host+path(不包含/chat/completions或/v1beta)">
                             <Input className="form-input"/>
                         </Form.Item>
 

@@ -4,7 +4,7 @@ import time
 import requests
 import subprocess
 import os
-from urllib.parse import quote_plus, parse_qsl, urlencode
+from urllib.parse import quote_plus, parse_qsl, urlencode, urlparse
 from cachetools import TTLCache
 from threading import Lock
 from functools import lru_cache
@@ -18,7 +18,7 @@ CACHE_TTL = 3600
 cache = TTLCache(maxsize=1000, ttl=CACHE_TTL)
 POST_CACHE = TTLCache(maxsize=1000, ttl=1)
 
-deno_path='home/container/deno'
+deno_path='/home/container/deno'
 
 @lru_cache(maxsize=None)
 def _lock_for(vId: str) -> Lock:
@@ -79,9 +79,9 @@ def _load_youtube_url(vId: str):
             return url
         else:
             raise ValueError("URL not found in response")
-        
+
 def fetch_youtube_url(vId: str):
-   
+
     # 1) 无锁快读
     url = cache.get(vId)
     if url is not None:
@@ -101,7 +101,7 @@ def fetch_youtube_url(vId: str):
         url = _load_youtube_url(vId)
         cache[vId] = url
         return url, False
-    
+
 
 @app.route('/youtube/get_youtube_url', methods=['GET'])
 def get_youtube_url():
@@ -178,77 +178,48 @@ def play_audio(vId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-    
-# gemini
-TARGET_BASE = "https://generativelanguage.googleapis.com/v1beta"
+
 
 # cache by query
-CACHE_SVC = "https://yt.hutang.cloudns.be/gemini/v1beta"
+CACHE_SVC = "https://yt.hutang.cloudns.be"
 
 
-def call_google_api(path, query, body, headers):
-    target_url = f"{TARGET_BASE}/{path}"
+def call_real_api(realHost, path, query, body, headers):
+    # 默认 Google API
+    base = realHost or "https://generativelanguage.googleapis.com"
+
+    # realHost 有值 → 只提取协议 + host
+    if realHost:
+        parsed = urlparse(realHost)
+        if parsed.scheme and parsed.netloc:
+            base = f"{parsed.scheme}://{parsed.netloc}"
+        else:
+            # 没写协议的情况，自动补 https://
+            base = f"https://{realHost.strip('/') }"
+
+    target_url = f"{base}/{path}"
+    print(f"realcall{target_url}")
     if query:
         target_url += "?" + urlencode(query)
+
     resp = requests.post(target_url, headers=headers, json=body, timeout=60)
     return resp
 
-@app.route('/v1beta', defaults={'path': ''}, methods=['POST'])
-@app.route('/v1beta/<path:path>', methods=['POST'])
-def proxy_v1beta(path):
-    incoming_body = request.json or {}
-    incoming_query = dict(request.args)
 
-    userInput = None
-    for c in incoming_body.get('contents', []):
-        if c.get('role') == 'user' and c.get('parts'):
-            text = c['parts'][0].get('text')
-            if text:
-                userInput = text
-                break
-
-    google_headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in ['host', 'content-length']
-    }
-
-    if userInput and "现在" in userInput:
-        print("命中关键词：现在 → 不缓存，直接请求 Google API")
-        resp = call_google_api(path, incoming_query, incoming_body, google_headers)
-        excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
-        response_headers = [(name, value) for name, value in resp.raw.headers.items()
-                            if name.lower() not in excluded_headers]
-
-        return Response(resp.content, resp.status_code, response_headers)
-
-    key = hashlib.md5((userInput or "").encode()).hexdigest()
-
-    POST_CACHE[key] = {
-        "body": incoming_body,
-        "query": incoming_query,
-        "headers": google_headers
-    }
-
-    gemini_url = f"{CACHE_SVC}/{path}?userInput={key}"
-    resp = requests.get(gemini_url, timeout=60)
-    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
-    response_headers = [(name, value) for name, value in resp.raw.headers.items()
-                        if name.lower() not in excluded_headers]
-
-    return Response(resp.content, resp.status_code, response_headers)
-
-@app.route('/gemini/v1beta', defaults={'path': ''}, methods=['GET'])
-@app.route('/gemini/v1beta/<path:path>', methods=['GET'])
-def proxy_gemini(path):
+@app.route('/ai', defaults={'path': ''}, methods=['GET'])
+@app.route('/ai/<path:path>', methods=['GET'])
+def proxy_ai(path):
     key = request.args.get("userInput")
     data = POST_CACHE.get(key)
     if not data:
-        return {"error": "token expired"}, 410
+        return {"error": "data expired"}, 410
 
     original_body = data["body"]
     original_query = data["query"]
     cached_headers = data.get("headers", {})
+    realHost = original_body.pop('real', None)
 
-    resp = call_google_api(path, original_query, original_body, cached_headers)
+    resp = call_real_api(realHost, path, original_query, original_body, cached_headers)
     excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
     response_headers = [(name, value) for name, value in resp.raw.headers.items()
                         if name.lower() not in excluded_headers]
@@ -314,6 +285,52 @@ def youtube_music_proxy():
     response_headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded_headers]
 
     return Response(resp.content, status=resp.status_code, headers=response_headers)
+
+
+@app.route('/', defaults={'path': ''}, methods=['POST'])
+@app.route('/<path:path>', methods=['POST'])
+def catch_all_post(path):
+    print(path)
+    incoming_body = request.json or {}
+    incoming_query = dict(request.args)
+
+    userInput = None
+    for c in incoming_body.get('contents', []):
+        if c.get('role') == 'user' and c.get('parts'):
+            text = c['parts'][0].get('text')
+            if text:
+                userInput = text
+                break
+
+    google_headers = {
+        k: v for k, v in request.headers.items() if k.lower() not in ['host', 'content-length']
+    }
+
+    if userInput and "现在" in userInput:
+        print("命中关键词：现在 → 不缓存，直接请求 Google API")
+        realHost = incoming_body.pop('real', None)
+        resp = call_real_api(realHost, path, incoming_query, incoming_body, google_headers)
+        excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+        response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                            if name.lower() not in excluded_headers]
+
+        return Response(resp.content, resp.status_code, response_headers)
+
+    key = hashlib.md5((userInput or "").encode()).hexdigest()
+
+    POST_CACHE[key] = {
+        "body": incoming_body,
+        "query": incoming_query,
+        "headers": google_headers
+    }
+
+    gemini_url = f"{CACHE_SVC}/ai/{path}?userInput={key}"
+    resp = requests.get(gemini_url, timeout=60)
+    excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
+    response_headers = [(name, value) for name, value in resp.raw.headers.items()
+                        if name.lower() not in excluded_headers]
+
+    return Response(resp.content, resp.status_code, response_headers)
 
 
 

@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 
+
 @Service("OpenAi")
 @Slf4j
 @Data
@@ -22,11 +23,18 @@ public class OpenAi implements IAIService, IWebAlias {
     @Override
     public ChatModel buildModel(Device device) {
         return OpenAiChatModel.builder()
-                .baseUrl(StringUtils.isEmpty(BASE_URL) ? device.getAiConfig().getEndpoint() : BASE_URL)
+                .baseUrl(openaiBaseUrl(device))
                 .apiKey(device.getAiConfig().getKey())
                 .modelName(StringUtils.isEmpty(MODEL) ? device.getAiConfig().getModel() : MODEL)
                 .strictTools(false)
                 .build();
+    }
+
+    private String openaiBaseUrl(Device device) {
+        if(StringUtils.isNoneEmpty(device.getAiConfig().getCdn())){
+            return device.getAiConfig().getCdn();
+        }
+        return StringUtils.isEmpty(BASE_URL) ? device.getAiConfig().getEndpoint() : BASE_URL;
     }
 
 
