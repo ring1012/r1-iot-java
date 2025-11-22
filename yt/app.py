@@ -10,6 +10,9 @@ from threading import Lock
 from functools import lru_cache
 import hashlib
 
+import subprocess
+import shlex
+
 
 app = Flask(__name__)
 
@@ -49,36 +52,58 @@ def load_cookies(cookie_file="/home/container/youtube.txt"):
     except Exception as e:
         print(f"[ERROR] 读取 cookie 文件失败: {e}")
 
+# def _load_youtube_url(vId: str):
+#     ydl_opts = {
+#         'format': '140',  # Audio only (m4a)
+#         'cookiefile': '/home/container/youtube.txt',
+#         'force_ipv4': True,
+#         'quiet': True,
+#         'no_warnings': True,
+#         'extract_flat': False,
+#         'js_runtimes': {'deno': {'executable': '/home/container/deno'}}
+#     }
+#
+#     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+#         info = ydl.extract_info(f'https://www.youtube.com/watch?v={vId}', download=False)
+#
+#         url = None
+#         # 优先直接取 url
+#         if 'url' in info:
+#             url = info['url']
+#         # 否则在 formats 里找 m4a
+#         elif 'formats' in info:
+#             for f in info['formats']:
+#                 if f.get('format_id') == '140':
+#                     url = f.get('url')
+#                     break
+#
+#         if url:
+#             print(f"缓存: {vId}")
+#             return url
+#         else:
+#             raise ValueError("URL not found in response")
+
 def _load_youtube_url(vId: str):
-    ydl_opts = {
-        'format': '140',  # Audio only (m4a)
-        'cookiefile': '/home/container/youtube.txt',
-        'force_ipv4': True,
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': False,
-        'js_runtimes': {'deno': {'executable': '/home/container/deno'}}
-    }
+    # 直接构造命令行输出，而不是调用 yt_dlp API
+    cmd = (
+        f"/home/container/yt-dlp "
+        f"--cookies /home/container/youtube.txt "
+        f"-f 140 "
+        f"--quiet --no-warnings "
+        f"--get-url {vId} "
+        f"--js-runtimes deno:/home/container/deno"
+    )
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f'https://www.youtube.com/watch?v={vId}', download=False)
+    # 执行命令并获取真实结果 URL（静默，无警告）
+    process = subprocess.run(shlex.split(cmd), capture_output=True, text=True)
 
-        url = None
-        # 优先直接取 url
-        if 'url' in info:
-            url = info['url']
-        # 否则在 formats 里找 m4a
-        elif 'formats' in info:
-            for f in info['formats']:
-                if f.get('format_id') == '140':
-                    url = f.get('url')
-                    break
+    url = process.stdout.strip()
+    print(f"缓存: {vId}")
 
-        if url:
-            print(f"缓存: {vId}")
-            return url
-        else:
-            raise ValueError("URL not found in response")
+    if url:
+        return url
+    else:
+        raise ValueError("URL not found in yt-dlp output")
 
 def fetch_youtube_url(vId: str):
 
@@ -198,7 +223,7 @@ def call_real_api(realHost, path, query, body, headers):
             base = f"https://{realHost.strip('/') }"
 
     target_url = f"{base}/{path}"
-    print(f"realcall{target_url}")
+    print(f"real call{target_url}")
     if query:
         target_url += "?" + urlencode(query)
 
@@ -290,7 +315,6 @@ def youtube_music_proxy():
 @app.route('/', defaults={'path': ''}, methods=['POST'])
 @app.route('/<path:path>', methods=['POST'])
 def catch_all_post(path):
-    print(path)
     incoming_body = request.json or {}
     incoming_query = dict(request.args)
 
@@ -301,13 +325,20 @@ def catch_all_post(path):
             if text:
                 userInput = text
                 break
+    if userInput is None:
+        for c in incoming_body.get('messages', []):
+            if c.get('role') == 'user' and c.get('content'):
+                text = c.get('content')
+                if text:
+                    userInput = text
+                    break
 
     google_headers = {
         k: v for k, v in request.headers.items() if k.lower() not in ['host', 'content-length']
     }
 
     if userInput and "现在" in userInput:
-        print("命中关键词：现在 → 不缓存，直接请求 Google API")
+        print("命中关键词：现在 → 不缓存，直接请求 AI API")
         realHost = incoming_body.pop('real', None)
         resp = call_real_api(realHost, path, incoming_query, incoming_body, google_headers)
         excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
@@ -316,16 +347,14 @@ def catch_all_post(path):
 
         return Response(resp.content, resp.status_code, response_headers)
 
-    key = hashlib.md5((userInput or "").encode()).hexdigest()
-
-    POST_CACHE[key] = {
+    POST_CACHE[userInput] = {
         "body": incoming_body,
         "query": incoming_query,
         "headers": google_headers
     }
 
-    gemini_url = f"{CACHE_SVC}/ai/{path}?userInput={key}"
-    resp = requests.get(gemini_url, timeout=60)
+    ai_cdn_url = f"{CACHE_SVC}/ai/{path}?userInput={userInput}"
+    resp = requests.get(ai_cdn_url, timeout=60)
     excluded_headers = ['content-encoding', 'transfer-encoding', 'connection']
     response_headers = [(name, value) for name, value in resp.raw.headers.items()
                         if name.lower() not in excluded_headers]
