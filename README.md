@@ -1,5 +1,5 @@
 ## 如果还是不会
-【闲鱼】https://m.tb.cn/h.6xNUds6?tk=WqSpVnM3dKv HU287 「我在闲鱼发布了【斐讯R1音箱】」
+【闲鱼】https://m.tb.cn/h.SwGMujS?tk=4DrTfmzF2a2 MF287 「我在闲鱼发布了【斐讯R1音箱】」
 点击链接直接打开
 
 ## Usage
