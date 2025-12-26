@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 CACHE_TTL = 3600
 cache = TTLCache(maxsize=1000, ttl=CACHE_TTL)
-POST_CACHE = TTLCache(maxsize=1000, ttl=1)
+POST_CACHE = TTLCache(maxsize=1000, ttl=5)
 
 deno_path='/home/container/deno'
 
@@ -52,37 +52,40 @@ def load_cookies(cookie_file="/home/container/youtube.txt"):
     except Exception as e:
         print(f"[ERROR] 读取 cookie 文件失败: {e}")
 
-# def _load_youtube_url(vId: str):
-#     ydl_opts = {
-#         'format': '140',  # Audio only (m4a)
-#         'cookiefile': '/home/container/youtube.txt',
-#         'force_ipv4': True,
-#         'quiet': True,
-#         'no_warnings': True,
-#         'extract_flat': False,
-#         'js_runtimes': {'deno': {'executable': '/home/container/deno'}}
-#     }
-#
-#     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-#         info = ydl.extract_info(f'https://www.youtube.com/watch?v={vId}', download=False)
-#
-#         url = None
-#         # 优先直接取 url
-#         if 'url' in info:
-#             url = info['url']
-#         # 否则在 formats 里找 m4a
-#         elif 'formats' in info:
-#             for f in info['formats']:
-#                 if f.get('format_id') == '140':
-#                     url = f.get('url')
-#                     break
-#
-#         if url:
-#             print(f"缓存: {vId}")
-#             return url
-#         else:
-#             raise ValueError("URL not found in response")
 
+
+def _load_youtube_url1(vId: str):
+    ydl_opts = {
+        'format': '140',  # Audio only (m4a)
+        'cookiefile': '/home/container/youtube.txt',
+        'force_ipv4': True,
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+        'js_runtimes': {'deno': {'executable': '/home/container/deno'}}
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(f'https://www.youtube.com/watch?v={vId}', download=False)
+
+        url = None
+        # 优先直接取 url
+        if 'url' in info:
+            url = info['url']
+        # 否则在 formats 里找 m4a
+        elif 'formats' in info:
+            for f in info['formats']:
+                if f.get('format_id') == '140':
+                    url = f.get('url')
+                    break
+
+        if url:
+            print(f"缓存: {vId}")
+            return url
+        else:
+            raise ValueError("URL not found in response")
+
+        
 def _load_youtube_url(vId: str):
     # 直接构造命令行输出，而不是调用 yt_dlp API
     cmd = (
