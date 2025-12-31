@@ -81,11 +81,14 @@ public class AiAssistant {
         }
 
         Map<String, Object> custom = new HashMap<>();
-        String aiEndpoint = Optional.ofNullable(this.boxDecision.getDevice().getAiConfig().getEndpoint()).orElse("");
-        if (aiEndpoint.toLowerCase().contains("bigmodel")) {
+        String modelName = Optional.ofNullable(this.boxDecision.getDevice().getAiConfig().getModel()).orElse("");
+        if (modelName.toLowerCase().contains("glm")) {
             Map<String, Object> thinking = new HashMap<>();
             thinking.put("type", "disabled");
             custom.put("thinking", thinking);
+        }
+        if (modelName.toLowerCase().contains("qwen")){
+            custom.put("enable_thinking", false);
         }
         if(StringUtils.hasLength(this.boxDecision.getDevice().getAiConfig().getCdn())){
             custom.put("real", this.boxDecision.getDevice().getAiConfig().getEndpoint());
