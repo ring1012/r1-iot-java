@@ -93,6 +93,12 @@
             <artifactId>guava</artifactId>
             <version>33.0.0-jre</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.houbb</groupId>
+            <artifactId>opencc4j</artifactId>
+            <version>1.14.0</version>
+        </dependency>
     </dependencies>
 
     <build>

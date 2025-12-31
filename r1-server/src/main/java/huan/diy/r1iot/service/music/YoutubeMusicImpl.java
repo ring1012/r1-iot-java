@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.Device;
@@ -80,9 +81,9 @@ public class YoutubeMusicImpl implements IMusicService {
                     JsonNode data = node.get("musicResponsiveListItemRenderer").get("flexColumns").get(0).get("musicResponsiveListItemFlexColumnRenderer").get("text").get("runs").get(0);
                     String id = data.get("navigationEndpoint").get("watchEndpoint").get("videoId").asText();
                     music.put("id", id);
-                    music.put("title", data.get("text").asText());
-                    music.put("artist", node.get("musicResponsiveListItemRenderer").get("flexColumns").get(1).get("musicResponsiveListItemFlexColumnRenderer")
-                            .get("text").get("runs").get(0).get("text").asText());
+                    music.put("title", ZhConverterUtil.toSimple(data.get("text").asText()));
+                    music.put("artist", ZhConverterUtil.toSimple(node.get("musicResponsiveListItemRenderer").get("flexColumns").get(1).get("musicResponsiveListItemFlexColumnRenderer")
+                            .get("text").get("runs").get(0).get("text").asText()));
                     music.put("url", (StringUtils.hasLength(globalConfig.getYtdlpEndpoint())
                             ?globalConfig.getYtdlpEndpoint():globalConfig.getHostIp()) + "/audio/play/" + id + ".m4a");
                     musicInfo.add(music);

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import huan.diy.r1iot.model.R1GlobalConfig;
@@ -108,15 +109,17 @@ public class YoutubeService {
         String html = response.getBody();
 
         // 从HTML中提取JSON数据
-        Pattern pattern = Pattern.compile("ytInitialData\\s*=\\s*(\\{.+?});");
-        Matcher matcher = pattern.matcher(html);
-        if (!matcher.find()) {
-            throw new RuntimeException("Failed to extract ytInitialData from YouTube response");
-        }
-        String jsonData = matcher.group(1);
+        int start = html.indexOf("var ytInitialData =") + "var ytInitialData =".length();
+        int end = html.indexOf("</script>", start);
 
+        String ytInitialDataJson = html.substring(start, end).trim();
+
+// 去掉结尾分号
+        if (ytInitialDataJson.endsWith(";")) {
+            ytInitialDataJson = ytInitialDataJson.substring(0, ytInitialDataJson.length() - 1);
+        }
         // 解析JSON
-        JsonNode rootNode = objectMapper.readTree(jsonData);
+        JsonNode rootNode = objectMapper.readTree(ytInitialDataJson);
 
         // 导航到视频列表节点
         JsonNode contents = rootNode.path("contents")
@@ -141,18 +144,18 @@ public class YoutubeService {
                     String id = renderer.path("videoId").asText();
                     music.put("id", id);
                     // 视频标题
-                    music.put("title", renderer.path("title")
+                    music.put("title", ZhConverterUtil.toSimple(renderer.path("title")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText().replaceAll(R1IotUtils.CHINESE, ""));
+                            .asText().replaceAll(R1IotUtils.CHINESE, "")));
 
                     // 频道名称（优先从ownerText获取）
-                    music.put("artist",  renderer.path("ownerText")
+                    music.put("artist", ZhConverterUtil.toSimple(renderer.path("ownerText")
                             .path("runs")
                             .get(0)
                             .path("text")
-                            .asText().replaceAll(R1IotUtils.CHINESE, ""));
+                            .asText().replaceAll(R1IotUtils.CHINESE, "")));
 
 
                     music.put("url", (StringUtils.hasLength(globalConfig.getYtdlpEndpoint())

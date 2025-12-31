@@ -101,7 +101,9 @@ public class BoxDecision {
     }
 
     @Tool("""
-            音箱一般设置：切换氛围灯，音量，停止，休眠，安静，播放模式（单曲循环，顺序）等等
+            音箱一般设置：切换氛围灯，音量，停止，休眠，安静，关机，闹钟，提醒，播放模式（单曲，循环，顺序）等等
+            user: 停止
+            AI：target="box" action="stop"
             """)
     void voiceBoxSetting(@P(value = "控制对象：氛围灯(lamp)，快进(faster)，快退(slower)，跳到时间(jump)，输出英文", required = false) String target,
                          @P(value = "执行动作, 比如打开(on)，关闭(off)，切换效果(change)，时间(数值，需要你帮忙转成秒)，输出英文", required = false) String action) {
@@ -215,9 +217,9 @@ public class BoxDecision {
 
 
     @Tool("""
-            用于查询天气，有默认位置，可以不用说城市
-            samples: 上海浦东后天什么天气
-            AI: locationName=浦东 offsetDay=2
+            用于查询天气，位置名默认为空字符串
+            samples: 后天什么天气
+            AI: locationName="" offsetDay=2
             """)
     void queryWeather(@P(value = "位置名", required = false) String locationName, @P(value = "offsetDay", required = false) Integer offsetDay) {
         offsetDay = offsetDay == null ? 0 : offsetDay;
